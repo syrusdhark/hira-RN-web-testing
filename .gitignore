@@ -1,0 +1,40 @@
+# dependencies
+node_modules/
+
+# env and secrets
+.env
+.env.local
+.env.*.local
+
+# Expo / Metro
+.expo/
+dist/
+web-build/
+*.tsbuildinfo
+.metro-health-check*
+
+# Genkit / tool caches
+.genkit/
+
+# OS and logs
+.DS_Store
+*.log
+
+# Mobile native build artifacts (if at root)
+/ios
+/android
+
+# Native / keys (mobile)
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*

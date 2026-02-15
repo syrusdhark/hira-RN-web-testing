@@ -1,0 +1,1236 @@
+{
+  "exercises": [
+    {
+      "name": "Barbell Bench Press",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "barbell",
+      "aliases": ["Bench Press", "Flat Barbell Bench", "Barbell Chest Press"],
+      "muscles": [
+        { "muscle": "Pectoralis Major", "role": "primary" },
+        { "muscle": "Triceps Brachii", "role": "secondary" },
+        { "muscle": "Deltoid Anterior", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Dumbbell Bench Press",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "dumbbell",
+      "aliases": ["DB Bench Press", "Dumbbell Chest Press"],
+      "muscles": [
+        { "muscle": "Pectoralis Major", "role": "primary" },
+        { "muscle": "Triceps Brachii", "role": "secondary" },
+        { "muscle": "Deltoid Anterior", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Incline Barbell Bench Press",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "barbell",
+      "aliases": ["Incline Bench", "Incline Barbell Press"],
+      "muscles": [
+        { "muscle": "Pectoralis Major", "role": "primary" },
+        { "muscle": "Deltoid Anterior", "role": "secondary" },
+        { "muscle": "Triceps Brachii", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Incline Dumbbell Press",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "dumbbell",
+      "aliases": ["Incline DB Press", "Incline Chest Press"],
+      "muscles": [
+        { "muscle": "Pectoralis Major", "role": "primary" },
+        { "muscle": "Deltoid Anterior", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Decline Bench Press",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "barbell",
+      "aliases": ["Decline Press", "Decline Barbell Bench"],
+      "muscles": [
+        { "muscle": "Pectoralis Major", "role": "primary" },
+        { "muscle": "Triceps Brachii", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Push-Up",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "bodyweight",
+      "aliases": ["Press-Up", "Bodyweight Push-Up"],
+      "muscles": [
+        { "muscle": "Pectoralis Major", "role": "primary" },
+        { "muscle": "Triceps Brachii", "role": "secondary" },
+        { "muscle": "Rectus Abdominis", "role": "stabilizer" }
+      ]
+    },
+    {
+      "name": "Chest Fly Machine",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "machine",
+      "aliases": ["Pec Deck", "Chest Fly"],
+      "muscles": [
+        { "muscle": "Pectoralis Major", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Dumbbell Chest Fly",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "dumbbell",
+      "aliases": ["DB Fly", "Dumbbell Fly"],
+      "muscles": [
+        { "muscle": "Pectoralis Major", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Cable Chest Fly",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "cable",
+      "aliases": ["Cable Fly", "Cable Crossover"],
+      "muscles": [
+        { "muscle": "Pectoralis Major", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Close-Grip Bench Press",
+      "category": "strength",
+      "difficulty_level": "advanced",
+      "equipment": "barbell",
+      "aliases": ["Close Bench", "CG Bench"],
+      "muscles": [
+        { "muscle": "Triceps Brachii", "role": "primary" },
+        { "muscle": "Pectoralis Major", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Weighted Push-Up",
+      "category": "strength",
+      "difficulty_level": "advanced",
+      "equipment": "bodyweight",
+      "aliases": ["Weighted Press-Up"],
+      "muscles": [
+        { "muscle": "Pectoralis Major", "role": "primary" },
+        { "muscle": "Triceps Brachii", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Smith Machine Bench Press",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "machine",
+      "aliases": ["Smith Bench", "Machine Bench Press"],
+      "muscles": [
+        { "muscle": "Pectoralis Major", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Floor Press",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "barbell",
+      "aliases": ["Barbell Floor Press"],
+      "muscles": [
+        { "muscle": "Pectoralis Major", "role": "primary" },
+        { "muscle": "Triceps Brachii", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Resistance Band Chest Press",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "band",
+      "aliases": ["Band Chest Press"],
+      "muscles": [
+        { "muscle": "Pectoralis Major", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Conventional Deadlift",
+      "category": "strength",
+      "difficulty_level": "advanced",
+      "equipment": "barbell",
+      "aliases": ["Deadlift", "Barbell Deadlift"],
+      "muscles": [
+        { "muscle": "Erector Spinae", "role": "primary" },
+        { "muscle": "Gluteus Maximus", "role": "secondary" },
+        { "muscle": "Latissimus Dorsi", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Bent-Over Barbell Row",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "barbell",
+      "aliases": ["Barbell Row", "Bent Row"],
+      "muscles": [
+        { "muscle": "Latissimus Dorsi", "role": "primary" },
+        { "muscle": "Rhomboids", "role": "secondary" },
+        { "muscle": "Biceps Brachii", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "One-Arm Dumbbell Row",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "dumbbell",
+      "aliases": ["Single Arm Row", "DB Row"],
+      "muscles": [
+        { "muscle": "Latissimus Dorsi", "role": "primary" },
+        { "muscle": "Rhomboids", "role": "secondary" },
+        { "muscle": "Biceps Brachii", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Seated Cable Row",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "cable",
+      "aliases": ["Cable Row", "Seated Row"],
+      "muscles": [
+        { "muscle": "Latissimus Dorsi", "role": "primary" },
+        { "muscle": "Rhomboids", "role": "secondary" },
+        { "muscle": "Trapezius", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Lat Pulldown",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "cable",
+      "aliases": ["Pulldown", "Wide-Grip Pulldown"],
+      "muscles": [
+        { "muscle": "Latissimus Dorsi", "role": "primary" },
+        { "muscle": "Biceps Brachii", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Pull-Up",
+      "category": "strength",
+      "difficulty_level": "advanced",
+      "equipment": "bodyweight",
+      "aliases": ["Pull Up", "Bodyweight Pull-Up"],
+      "muscles": [
+        { "muscle": "Latissimus Dorsi", "role": "primary" },
+        { "muscle": "Biceps Brachii", "role": "secondary" },
+        { "muscle": "Rhomboids", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Chin-Up",
+      "category": "strength",
+      "difficulty_level": "advanced",
+      "equipment": "bodyweight",
+      "aliases": ["Chin Up", "Underhand Pull-Up"],
+      "muscles": [
+        { "muscle": "Latissimus Dorsi", "role": "primary" },
+        { "muscle": "Biceps Brachii", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "T-Bar Row",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "barbell",
+      "aliases": ["Landmine Row", "Chest-Supported T-Bar Row"],
+      "muscles": [
+        { "muscle": "Latissimus Dorsi", "role": "primary" },
+        { "muscle": "Rhomboids", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Chest-Supported Dumbbell Row",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "dumbbell",
+      "aliases": ["Incline DB Row", "Supported Row"],
+      "muscles": [
+        { "muscle": "Latissimus Dorsi", "role": "primary" },
+        { "muscle": "Trapezius", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Straight Arm Pulldown",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "cable",
+      "aliases": ["Lat Pushdown", "Cable Pullover"],
+      "muscles": [
+        { "muscle": "Latissimus Dorsi", "role": "primary" },
+        { "muscle": "Triceps Brachii", "role": "stabilizer" }
+      ]
+    },
+    {
+      "name": "Inverted Row",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "bodyweight",
+      "aliases": ["Bodyweight Row", "Australian Pull-Up"],
+      "muscles": [
+        { "muscle": "Latissimus Dorsi", "role": "primary" },
+        { "muscle": "Rhomboids", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Machine Row",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "machine",
+      "aliases": ["Row Machine", "Plate-Loaded Row"],
+      "muscles": [
+        { "muscle": "Latissimus Dorsi", "role": "primary" },
+        { "muscle": "Trapezius", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Good Morning",
+      "category": "strength",
+      "difficulty_level": "advanced",
+      "equipment": "barbell",
+      "aliases": ["Barbell Good Morning"],
+      "muscles": [
+        { "muscle": "Erector Spinae", "role": "primary" },
+        { "muscle": "Hamstrings", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Back Extension",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "bodyweight",
+      "aliases": ["Hyperextension", "Roman Chair Extension"],
+      "muscles": [
+        { "muscle": "Erector Spinae", "role": "primary" },
+        { "muscle": "Gluteus Maximus", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Rack Pull",
+      "category": "strength",
+      "difficulty_level": "advanced",
+      "equipment": "barbell",
+      "aliases": ["Partial Deadlift", "Block Pull"],
+      "muscles": [
+        { "muscle": "Erector Spinae", "role": "primary" },
+        { "muscle": "Latissimus Dorsi", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Barbell Overhead Press",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "barbell",
+      "aliases": ["Overhead Press", "Military Press", "Barbell Shoulder Press"],
+      "muscles": [
+        { "muscle": "Deltoid Anterior", "role": "primary" },
+        { "muscle": "Deltoid Lateral", "role": "secondary" },
+        { "muscle": "Triceps Brachii", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Dumbbell Shoulder Press",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "dumbbell",
+      "aliases": ["DB Shoulder Press", "Dumbbell Overhead Press"],
+      "muscles": [
+        { "muscle": "Deltoid Anterior", "role": "primary" },
+        { "muscle": "Deltoid Lateral", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Arnold Press",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "dumbbell",
+      "aliases": ["Arnold Dumbbell Press"],
+      "muscles": [
+        { "muscle": "Deltoid Anterior", "role": "primary" },
+        { "muscle": "Deltoid Lateral", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Lateral Raise",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "dumbbell",
+      "aliases": ["Side Raise", "DB Lateral Raise"],
+      "muscles": [
+        { "muscle": "Deltoid Lateral", "role": "primary" },
+        { "muscle": "Deltoid Anterior", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Cable Lateral Raise",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "cable",
+      "aliases": ["Cable Side Raise"],
+      "muscles": [
+        { "muscle": "Deltoid Lateral", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Front Raise",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "dumbbell",
+      "aliases": ["DB Front Raise"],
+      "muscles": [
+        { "muscle": "Deltoid Anterior", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Rear Delt Fly",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "dumbbell",
+      "aliases": ["Reverse Fly", "Rear Delt Raise"],
+      "muscles": [
+        { "muscle": "Deltoid Posterior", "role": "primary" },
+        { "muscle": "Rhomboids", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Face Pull",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "cable",
+      "aliases": ["Cable Face Pull"],
+      "muscles": [
+        { "muscle": "Deltoid Posterior", "role": "primary" },
+        { "muscle": "Trapezius", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Upright Row",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "barbell",
+      "aliases": ["Barbell Upright Row"],
+      "muscles": [
+        { "muscle": "Deltoid Lateral", "role": "primary" },
+        { "muscle": "Trapezius", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Machine Shoulder Press",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "machine",
+      "aliases": ["Seated Shoulder Press Machine"],
+      "muscles": [
+        { "muscle": "Deltoid Anterior", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Cable Front Raise",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "cable",
+      "aliases": ["Cable Front Raise"],
+      "muscles": [
+        { "muscle": "Deltoid Anterior", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Barbell Push Press",
+      "category": "strength",
+      "difficulty_level": "advanced",
+      "equipment": "barbell",
+      "aliases": ["Push Press"],
+      "muscles": [
+        { "muscle": "Deltoid Anterior", "role": "primary" },
+        { "muscle": "Quadriceps", "role": "secondary" },
+        { "muscle": "Triceps Brachii", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Barbell Biceps Curl",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "barbell",
+      "aliases": ["Barbell Curl", "Straight Bar Curl"],
+      "muscles": [
+        { "muscle": "Biceps Brachii", "role": "primary" },
+        { "muscle": "Brachialis", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Dumbbell Biceps Curl",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "dumbbell",
+      "aliases": ["DB Curl", "Dumbbell Curl"],
+      "muscles": [
+        { "muscle": "Biceps Brachii", "role": "primary" },
+        { "muscle": "Brachialis", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Hammer Curl",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "dumbbell",
+      "aliases": ["Neutral Grip Curl", "DB Hammer Curl"],
+      "muscles": [
+        { "muscle": "Brachialis", "role": "primary" },
+        { "muscle": "Biceps Brachii", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Preacher Curl",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "machine",
+      "aliases": ["Preacher Bench Curl", "EZ Bar Preacher Curl"],
+      "muscles": [
+        { "muscle": "Biceps Brachii", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Cable Biceps Curl",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "cable",
+      "aliases": ["Cable Curl", "Standing Cable Curl"],
+      "muscles": [
+        { "muscle": "Biceps Brachii", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Triceps Pushdown",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "cable",
+      "aliases": ["Cable Pushdown", "Triceps Pressdown"],
+      "muscles": [
+        { "muscle": "Triceps Brachii", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Overhead Triceps Extension",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "dumbbell",
+      "aliases": ["DB Triceps Extension", "Overhead Extension"],
+      "muscles": [
+        { "muscle": "Triceps Brachii", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Skullcrusher",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "barbell",
+      "aliases": ["Lying Triceps Extension", "EZ Bar Skullcrusher"],
+      "muscles": [
+        { "muscle": "Triceps Brachii", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Dips",
+      "category": "strength",
+      "difficulty_level": "advanced",
+      "equipment": "bodyweight",
+      "aliases": ["Parallel Bar Dips", "Triceps Dips"],
+      "muscles": [
+        { "muscle": "Triceps Brachii", "role": "primary" },
+        { "muscle": "Pectoralis Major", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Concentration Curl",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "dumbbell",
+      "aliases": ["Single Arm Curl", "DB Concentration Curl"],
+      "muscles": [
+        { "muscle": "Biceps Brachii", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Cable Triceps Kickback",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "cable",
+      "aliases": ["Triceps Kickback", "Cable Kickback"],
+      "muscles": [
+        { "muscle": "Triceps Brachii", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Back Squat",
+      "category": "strength",
+      "difficulty_level": "advanced",
+      "equipment": "barbell",
+      "aliases": ["Barbell Squat", "High Bar Squat"],
+      "muscles": [
+        { "muscle": "Quadriceps", "role": "primary" },
+        { "muscle": "Gluteus Maximus", "role": "secondary" },
+        { "muscle": "Erector Spinae", "role": "stabilizer" }
+      ]
+    },
+    {
+      "name": "Front Squat",
+      "category": "strength",
+      "difficulty_level": "advanced",
+      "equipment": "barbell",
+      "aliases": ["Barbell Front Squat"],
+      "muscles": [
+        { "muscle": "Quadriceps", "role": "primary" },
+        { "muscle": "Gluteus Maximus", "role": "secondary" },
+        { "muscle": "Rectus Abdominis", "role": "stabilizer" }
+      ]
+    },
+    {
+      "name": "Goblet Squat",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "dumbbell",
+      "aliases": ["DB Goblet Squat"],
+      "muscles": [
+        { "muscle": "Quadriceps", "role": "primary" },
+        { "muscle": "Gluteus Maximus", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Leg Press",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "machine",
+      "aliases": ["Machine Leg Press"],
+      "muscles": [
+        { "muscle": "Quadriceps", "role": "primary" },
+        { "muscle": "Gluteus Maximus", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Romanian Deadlift",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "barbell",
+      "aliases": ["RDL", "Barbell RDL"],
+      "muscles": [
+        { "muscle": "Hamstrings", "role": "primary" },
+        { "muscle": "Gluteus Maximus", "role": "secondary" },
+        { "muscle": "Erector Spinae", "role": "stabilizer" }
+      ]
+    },
+    {
+      "name": "Stiff-Leg Deadlift",
+      "category": "strength",
+      "difficulty_level": "advanced",
+      "equipment": "barbell",
+      "aliases": ["SLDL", "Stiff Leg DL"],
+      "muscles": [
+        { "muscle": "Hamstrings", "role": "primary" },
+        { "muscle": "Gluteus Maximus", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Lying Leg Curl",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "machine",
+      "aliases": ["Hamstring Curl", "Leg Curl Machine"],
+      "muscles": [
+        { "muscle": "Hamstrings", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Seated Leg Curl",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "machine",
+      "aliases": ["Seated Hamstring Curl"],
+      "muscles": [
+        { "muscle": "Hamstrings", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Walking Lunge",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "bodyweight",
+      "aliases": ["Lunges", "Forward Lunge"],
+      "muscles": [
+        { "muscle": "Quadriceps", "role": "primary" },
+        { "muscle": "Gluteus Maximus", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Bulgarian Split Squat",
+      "category": "strength",
+      "difficulty_level": "advanced",
+      "equipment": "bodyweight",
+      "aliases": ["Rear Foot Elevated Split Squat", "RFESS"],
+      "muscles": [
+        { "muscle": "Quadriceps", "role": "primary" },
+        { "muscle": "Gluteus Maximus", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Step-Up",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "dumbbell",
+      "aliases": ["DB Step-Up", "Box Step-Up"],
+      "muscles": [
+        { "muscle": "Quadriceps", "role": "primary" },
+        { "muscle": "Gluteus Maximus", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Hip Thrust",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "barbell",
+      "aliases": ["Barbell Hip Thrust"],
+      "muscles": [
+        { "muscle": "Gluteus Maximus", "role": "primary" },
+        { "muscle": "Hamstrings", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Glute Bridge",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "bodyweight",
+      "aliases": ["Bodyweight Glute Bridge"],
+      "muscles": [
+        { "muscle": "Gluteus Maximus", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Standing Calf Raise",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "bodyweight",
+      "aliases": ["Calf Raise"],
+      "muscles": [
+        { "muscle": "Gastrocnemius", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Seated Calf Raise",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "machine",
+      "aliases": ["Seated Calf Machine"],
+      "muscles": [
+        { "muscle": "Soleus", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Hack Squat",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "machine",
+      "aliases": ["Hack Squat Machine"],
+      "muscles": [
+        { "muscle": "Quadriceps", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Sumo Deadlift",
+      "category": "strength",
+      "difficulty_level": "advanced",
+      "equipment": "barbell",
+      "aliases": ["Wide Stance Deadlift"],
+      "muscles": [
+        { "muscle": "Gluteus Maximus", "role": "primary" },
+        { "muscle": "Hamstrings", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Single-Leg Romanian Deadlift",
+      "category": "strength",
+      "difficulty_level": "advanced",
+      "equipment": "dumbbell",
+      "aliases": ["Single Leg RDL"],
+      "muscles": [
+        { "muscle": "Hamstrings", "role": "primary" },
+        { "muscle": "Gluteus Maximus", "role": "secondary" },
+        { "muscle": "Rectus Abdominis", "role": "stabilizer" }
+      ]
+    },
+    {
+      "name": "Leg Extension",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "machine",
+      "aliases": ["Quad Extension"],
+      "muscles": [
+        { "muscle": "Quadriceps", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Reverse Lunge",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "bodyweight",
+      "aliases": ["Backward Lunge"],
+      "muscles": [
+        { "muscle": "Quadriceps", "role": "primary" },
+        { "muscle": "Gluteus Maximus", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Plank",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "bodyweight",
+      "aliases": ["Front Plank", "Isometric Plank"],
+      "muscles": [
+        { "muscle": "Rectus Abdominis", "role": "primary" },
+        { "muscle": "Transverse Abdominis", "role": "stabilizer" }
+      ]
+    },
+    {
+      "name": "Side Plank",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "bodyweight",
+      "aliases": ["Lateral Plank"],
+      "muscles": [
+        { "muscle": "Obliques", "role": "primary" },
+        { "muscle": "Transverse Abdominis", "role": "stabilizer" }
+      ]
+    },
+    {
+      "name": "Crunch",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "bodyweight",
+      "aliases": ["Ab Crunch", "Floor Crunch"],
+      "muscles": [
+        { "muscle": "Rectus Abdominis", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Bicycle Crunch",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "bodyweight",
+      "aliases": ["Bicycle Abs"],
+      "muscles": [
+        { "muscle": "Rectus Abdominis", "role": "primary" },
+        { "muscle": "Obliques", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Hanging Leg Raise",
+      "category": "strength",
+      "difficulty_level": "advanced",
+      "equipment": "bodyweight",
+      "aliases": ["Hanging Knee Raise", "Hanging Abs"],
+      "muscles": [
+        { "muscle": "Rectus Abdominis", "role": "primary" },
+        { "muscle": "Hip Flexors", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Lying Leg Raise",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "bodyweight",
+      "aliases": ["Leg Raises"],
+      "muscles": [
+        { "muscle": "Rectus Abdominis", "role": "primary" },
+        { "muscle": "Hip Flexors", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Russian Twist",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "bodyweight",
+      "aliases": ["Seated Twist"],
+      "muscles": [
+        { "muscle": "Obliques", "role": "primary" },
+        { "muscle": "Rectus Abdominis", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Cable Crunch",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "cable",
+      "aliases": ["Kneeling Cable Crunch"],
+      "muscles": [
+        { "muscle": "Rectus Abdominis", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Ab Wheel Rollout",
+      "category": "strength",
+      "difficulty_level": "advanced",
+      "equipment": "bodyweight",
+      "aliases": ["Ab Roller", "Wheel Rollout"],
+      "muscles": [
+        { "muscle": "Rectus Abdominis", "role": "primary" },
+        { "muscle": "Transverse Abdominis", "role": "stabilizer" }
+      ]
+    },
+    {
+      "name": "Dead Bug",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "bodyweight",
+      "aliases": ["Deadbug"],
+      "muscles": [
+        { "muscle": "Transverse Abdominis", "role": "primary" },
+        { "muscle": "Rectus Abdominis", "role": "stabilizer" }
+      ]
+    },
+    {
+      "name": "Bird Dog",
+      "category": "strength",
+      "difficulty_level": "beginner",
+      "equipment": "bodyweight",
+      "aliases": ["Quadruped Extension"],
+      "muscles": [
+        { "muscle": "Erector Spinae", "role": "primary" },
+        { "muscle": "Transverse Abdominis", "role": "stabilizer" }
+      ]
+    },
+    {
+      "name": "Back Extension Hold",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "bodyweight",
+      "aliases": ["Isometric Back Extension"],
+      "muscles": [
+        { "muscle": "Erector Spinae", "role": "primary" },
+        { "muscle": "Gluteus Maximus", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Running",
+      "category": "cardio",
+      "difficulty_level": "beginner",
+      "equipment": "bodyweight",
+      "aliases": ["Jogging", "Treadmill Run"],
+      "muscles": [
+        { "muscle": "Quadriceps", "role": "secondary" },
+        { "muscle": "Hamstrings", "role": "secondary" },
+        { "muscle": "Gluteus Maximus", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Cycling",
+      "category": "cardio",
+      "difficulty_level": "beginner",
+      "equipment": "machine",
+      "aliases": ["Stationary Bike", "Spin Bike"],
+      "muscles": [
+        { "muscle": "Quadriceps", "role": "primary" },
+        { "muscle": "Hamstrings", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Rowing",
+      "category": "cardio",
+      "difficulty_level": "intermediate",
+      "equipment": "machine",
+      "aliases": ["Rowing Machine", "Erg Row"],
+      "muscles": [
+        { "muscle": "Latissimus Dorsi", "role": "secondary" },
+        { "muscle": "Quadriceps", "role": "secondary" },
+        { "muscle": "Erector Spinae", "role": "stabilizer" }
+      ]
+    },
+    {
+      "name": "Elliptical Trainer",
+      "category": "cardio",
+      "difficulty_level": "beginner",
+      "equipment": "machine",
+      "aliases": ["Elliptical", "Cross Trainer"],
+      "muscles": [
+        { "muscle": "Quadriceps", "role": "secondary" },
+        { "muscle": "Gluteus Maximus", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Jump Rope",
+      "category": "cardio",
+      "difficulty_level": "intermediate",
+      "equipment": "bodyweight",
+      "aliases": ["Skipping Rope", "Skipping"],
+      "muscles": [
+        { "muscle": "Gastrocnemius", "role": "primary" },
+        { "muscle": "Quadriceps", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Stair Climber",
+      "category": "cardio",
+      "difficulty_level": "intermediate",
+      "equipment": "machine",
+      "aliases": ["Stairmaster", "Step Machine"],
+      "muscles": [
+        { "muscle": "Gluteus Maximus", "role": "primary" },
+        { "muscle": "Quadriceps", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "High Knees",
+      "category": "cardio",
+      "difficulty_level": "beginner",
+      "equipment": "bodyweight",
+      "aliases": ["High Knee Run"],
+      "muscles": [
+        { "muscle": "Hip Flexors", "role": "primary" },
+        { "muscle": "Quadriceps", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Burpees",
+      "category": "cardio",
+      "difficulty_level": "advanced",
+      "equipment": "bodyweight",
+      "aliases": ["Bodyweight Burpees"],
+      "muscles": [
+        { "muscle": "Quadriceps", "role": "secondary" },
+        { "muscle": "Pectoralis Major", "role": "secondary" },
+        { "muscle": "Rectus Abdominis", "role": "stabilizer" }
+      ]
+    },
+    {
+      "name": "Mountain Climbers",
+      "category": "cardio",
+      "difficulty_level": "intermediate",
+      "equipment": "bodyweight",
+      "aliases": ["Mountain Climber Exercise"],
+      "muscles": [
+        { "muscle": "Hip Flexors", "role": "primary" },
+        { "muscle": "Rectus Abdominis", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Assault Bike",
+      "category": "cardio",
+      "difficulty_level": "advanced",
+      "equipment": "machine",
+      "aliases": ["Air Bike", "Fan Bike"],
+      "muscles": [
+        { "muscle": "Quadriceps", "role": "secondary" },
+        { "muscle": "Deltoid Anterior", "role": "secondary" },
+        { "muscle": "Rectus Abdominis", "role": "stabilizer" }
+      ]
+    },
+    {
+      "name": "World's Greatest Stretch",
+      "category": "mobility",
+      "difficulty_level": "beginner",
+      "equipment": "bodyweight",
+      "aliases": ["Lunge Rotation Stretch", "Greatest Stretch"],
+      "muscles": [
+        { "muscle": "Hip Flexors", "role": "primary" },
+        { "muscle": "Hamstrings", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Hip Flexor Stretch",
+      "category": "mobility",
+      "difficulty_level": "beginner",
+      "equipment": "bodyweight",
+      "aliases": ["Kneeling Hip Flexor Stretch", "Lunge Stretch"],
+      "muscles": [
+        { "muscle": "Hip Flexors", "role": "primary" }
+      ]
+    },
+    {
+      "name": "90-90 Hip Rotation",
+      "category": "mobility",
+      "difficulty_level": "beginner",
+      "equipment": "bodyweight",
+      "aliases": ["90-90 Stretch", "Hip Rotation Drill"],
+      "muscles": [
+        { "muscle": "Gluteus Medius", "role": "primary" },
+        { "muscle": "Hip Flexors", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Thoracic Spine Rotation",
+      "category": "mobility",
+      "difficulty_level": "beginner",
+      "equipment": "bodyweight",
+      "aliases": ["T-Spine Rotation", "Open Book Stretch"],
+      "muscles": [
+        { "muscle": "Erector Spinae", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Cat-Cow Stretch",
+      "category": "mobility",
+      "difficulty_level": "beginner",
+      "equipment": "bodyweight",
+      "aliases": ["Cat Cow", "Spinal Flexion Extension"],
+      "muscles": [
+        { "muscle": "Erector Spinae", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Ankle Dorsiflexion Drill",
+      "category": "mobility",
+      "difficulty_level": "beginner",
+      "equipment": "bodyweight",
+      "aliases": ["Ankle Mobility Drill"],
+      "muscles": [
+        { "muscle": "Soleus", "role": "primary" },
+        { "muscle": "Gastrocnemius", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Shoulder Dislocates",
+      "category": "mobility",
+      "difficulty_level": "beginner",
+      "equipment": "band",
+      "aliases": ["Band Dislocates", "Shoulder Pass Through"],
+      "muscles": [
+        { "muscle": "Deltoid Anterior", "role": "primary" },
+        { "muscle": "Deltoid Posterior", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Deep Squat Hold",
+      "category": "mobility",
+      "difficulty_level": "beginner",
+      "equipment": "bodyweight",
+      "aliases": ["Asian Squat Hold", "Goblet Squat Hold"],
+      "muscles": [
+        { "muscle": "Hip Flexors", "role": "secondary" },
+        { "muscle": "Gastrocnemius", "role": "stabilizer" }
+      ]
+    },
+    {
+      "name": "Power Clean",
+      "category": "strength",
+      "difficulty_level": "advanced",
+      "equipment": "barbell",
+      "aliases": ["Clean", "Barbell Power Clean"],
+      "muscles": [
+        { "muscle": "Gluteus Maximus", "role": "primary" },
+        { "muscle": "Quadriceps", "role": "secondary" },
+        { "muscle": "Trapezius", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Clean and Jerk",
+      "category": "strength",
+      "difficulty_level": "advanced",
+      "equipment": "barbell",
+      "aliases": ["Olympic Clean and Jerk", "C&J"],
+      "muscles": [
+        { "muscle": "Gluteus Maximus", "role": "primary" },
+        { "muscle": "Quadriceps", "role": "secondary" },
+        { "muscle": "Deltoid Anterior", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Snatch",
+      "category": "strength",
+      "difficulty_level": "advanced",
+      "equipment": "barbell",
+      "aliases": ["Olympic Snatch", "Barbell Snatch"],
+      "muscles": [
+        { "muscle": "Gluteus Maximus", "role": "primary" },
+        { "muscle": "Quadriceps", "role": "secondary" },
+        { "muscle": "Trapezius", "role": "secondary" }
+      ]
+    },
+    {
+      "name": "Thruster",
+      "category": "strength",
+      "difficulty_level": "advanced",
+      "equipment": "barbell",
+      "aliases": ["Squat to Press", "Barbell Thruster"],
+      "muscles": [
+        { "muscle": "Quadriceps", "role": "primary" },
+        { "muscle": "Deltoid Anterior", "role": "secondary" },
+        { "muscle": "Rectus Abdominis", "role": "stabilizer" }
+      ]
+    },
+    {
+      "name": "Kettlebell Swing",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "kettlebell",
+      "aliases": ["KB Swing", "Russian Swing"],
+      "muscles": [
+        { "muscle": "Gluteus Maximus", "role": "primary" },
+        { "muscle": "Hamstrings", "role": "secondary" },
+        { "muscle": "Rectus Abdominis", "role": "stabilizer" }
+      ]
+    },
+    {
+      "name": "Man Maker",
+      "category": "strength",
+      "difficulty_level": "advanced",
+      "equipment": "dumbbell",
+      "aliases": ["DB Man Maker"],
+      "muscles": [
+        { "muscle": "Quadriceps", "role": "secondary" },
+        { "muscle": "Pectoralis Major", "role": "secondary" },
+        { "muscle": "Rectus Abdominis", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Farmer's Carry",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "dumbbell",
+      "aliases": ["Farmer Walk", "Loaded Carry"],
+      "muscles": [
+        { "muscle": "Trapezius", "role": "primary" },
+        { "muscle": "Rectus Abdominis", "role": "stabilizer" }
+      ]
+    },
+    {
+      "name": "Bear Crawl",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "bodyweight",
+      "aliases": ["Quadrupedal Crawl"],
+      "muscles": [
+        { "muscle": "Deltoid Anterior", "role": "secondary" },
+        { "muscle": "Quadriceps", "role": "secondary" },
+        { "muscle": "Rectus Abdominis", "role": "primary" }
+      ]
+    },
+    {
+      "name": "Wall Ball",
+      "category": "strength",
+      "difficulty_level": "intermediate",
+      "equipment": "medicine ball",
+      "aliases": ["Wall Ball Shots"],
+      "muscles": [
+        { "muscle": "Quadriceps", "role": "primary" },
+        { "muscle": "Deltoid Anterior", "role": "secondary" },
+        { "muscle": "Rectus Abdominis", "role": "stabilizer" }
+      ]
+    },
+    {
+      "name": "Sandbag Clean",
+      "category": "strength",
+      "difficulty_level": "advanced",
+      "equipment": "other",
+      "aliases": ["Sandbag Lift", "Sandbag Clean to Shoulder"],
+      "muscles": [
+        { "muscle": "Gluteus Maximus", "role": "primary" },
+        { "muscle": "Quadriceps", "role": "secondary" },
+        { "muscle": "Rectus Abdominis", "role": "stabilizer" }
+      ]
+    }
+  ]
+}
