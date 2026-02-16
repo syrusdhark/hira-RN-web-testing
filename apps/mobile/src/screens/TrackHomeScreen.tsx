@@ -20,6 +20,8 @@ const TRACK_TABS: TabConfig[] = [
 ];
 
 export function TrackHomeScreen({
+  activeTab: activeTabProp = 'track',
+  onTabChange,
   onNavigateToWorkout,
   onStartTodayProgramWorkout,
   onNavigateToSleep,
@@ -36,6 +38,8 @@ export function TrackHomeScreen({
   onEditTemplate,
   onNavigateToWorkoutInsights,
 }: {
+  activeTab?: string;
+  onTabChange?: (key: string) => void;
   onNavigateToWorkout?: () => void;
   onStartTodayProgramWorkout?: (payload: StartProgramDayPayload) => void;
   onNavigateToSleep?: () => void;
@@ -52,14 +56,10 @@ export function TrackHomeScreen({
   onEditTemplate?: (templateId: string) => void;
   onNavigateToWorkoutInsights?: () => void;
 }) {
-  const [activeTab, setActiveTab] = React.useState('track');
+  const activeTab = activeTabProp;
 
   const handleTabPress = (key: string) => {
-    if (key === 'chat') {
-      setActiveTab('chat');
-      return;
-    }
-    setActiveTab(key);
+    onTabChange?.(key);
   };
 
   const renderContent = () => {

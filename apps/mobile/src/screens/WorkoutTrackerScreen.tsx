@@ -9,6 +9,7 @@ import {
   ScrollView,
   Dimensions,
   ActivityIndicator,
+  ImageBackground,
 } from 'react-native';
 
 import { supabase } from '../lib/supabase';
@@ -18,6 +19,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { colors, radius, space, typography } from '../theme';
 import { FloatingBackButton } from '../components/FloatingBackButton';
 import { NextWorkoutCard } from '../components/OverviewCards';
+
+const ACTIVITY_TYPES = [
+  { source: require('../../assets/bodybuilding.jpg'), title: 'Bodybuilding' },
+  { source: require('../../assets/calisthenics-woman.png'), title: 'Calisthenics' },
+  { source: require('../../assets/male-runner-in-action.jpg'), title: 'Running' },
+  { source: require('../../assets/stretch.jpg'), title: 'Stretch' },
+  { source: require('../../assets/yoga-female.png'), title: 'Yoga' },
+];
 
 type WorkoutTrackerScreenProps = {
   navigation?: { goBack: () => void };
@@ -40,6 +49,9 @@ export function WorkoutTrackerScreen({
 }: WorkoutTrackerScreenProps) {
   const paddingTop = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) + 16 : 56;
   const cardWidth = Dimensions.get('window').width * 0.45;
+  const activityTypeCardWidth = Dimensions.get('window').width * 0.40;
+  const activityTypeCardHeight = 140;
+  const dayNumber = new Date().getDate();
   const { data, isLoading } = useWorkoutTemplates();
   const templates = (data || []).slice(0, 5);
   const loading = isLoading;
@@ -55,6 +67,10 @@ export function WorkoutTrackerScreen({
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.streakDayRow}>
+          <MaterialCommunityIcons name="fire" size={22} color={colors.actionAmber} />
+          <Text style={styles.streakDayNumber}>{dayNumber}</Text>
+        </View>
         <View style={styles.moveCardWrap}>
           <NextWorkoutCard
             fullWidth
@@ -66,17 +82,34 @@ export function WorkoutTrackerScreen({
           />
         </View>
 
-        {/* Workout Insights */}
-        {onNavigateToWorkoutInsights ? (
-          <Pressable style={styles.insightsCard} onPress={onNavigateToWorkoutInsights}>
-            <MaterialCommunityIcons name="chart-box-outline" size={22} color={colors.primaryViolet} />
-            <Text style={styles.insightsCardText}>Muscle intensity</Text>
-            <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textTertiary} />
-          </Pressable>
-        ) : null}
-
         {/* Start Workout Action */}
 
+        {/* Activity Types */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>Activity Types</Text>
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.activityTypesScroll}
+        >
+          {ACTIVITY_TYPES.map((item, index) => (
+            <ImageBackground
+              key={index}
+              source={item.source}
+              resizeMode="cover"
+              style={[styles.activityTypeBox, { width: activityTypeCardWidth, height: activityTypeCardHeight }]}
+              imageStyle={styles.activityTypeImage}
+            >
+              <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.8)']}
+                style={styles.activityTypeTitleWrap}
+              >
+                <Text style={styles.activityTypeTitle}>{item.title}</Text>
+              </LinearGradient>
+            </ImageBackground>
+          ))}
+        </ScrollView>
 
         {/* My Workouts */}
         <View style={styles.sectionHeaderRow}>
@@ -216,6 +249,17 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: space.md,
     paddingTop: space.xl,
+  },
+  streakDayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs,
+    marginBottom: space.sm,
+  },
+  streakDayNumber: {
+    color: colors.textPrimary,
+    fontSize: 19,
+    fontWeight: '600',
   },
   moveCardWrap: {
     marginTop: space.lg,
@@ -378,6 +422,34 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     marginBottom: space.md,
   },
+  activityTypesScroll: {
+    gap: space.md,
+    paddingRight: space.md,
+    marginBottom: space.lg,
+  },
+  activityTypeBox: {
+    backgroundColor: '#fff',
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+  },
+  activityTypeImage: {
+    borderRadius: radius.xl,
+  },
+  activityTypeTitleWrap: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.md,
+    justifyContent: 'flex-end',
+    minHeight: 48,
+  },
+  activityTypeTitle: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   sectionTitle: {
     color: colors.textPrimary,
     fontSize: 18,
@@ -534,22 +606,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 15,
     fontWeight: '500',
-  },
-  insightsCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.bgElevated,
-    borderRadius: radius.lg,
-    paddingVertical: space.md,
-    paddingHorizontal: space.lg,
-    marginBottom: space.lg,
-    gap: space.sm,
-  },
-  insightsCardText: {
-    flex: 1,
-    ...typography.base,
-    fontWeight: '500',
-    color: colors.textPrimary,
   },
 });
 

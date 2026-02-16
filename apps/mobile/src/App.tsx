@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, BackHandler, Platform, Modal, Text } from 'react-native';
 import { Session } from '@supabase/supabase-js';
@@ -51,11 +51,11 @@ const AuthStack = createNativeStackNavigator();
 type ScreenKey = 'track' | 'sleep-tracker' | 'nutrition-details' | 'food-search' | 'workout' | 'workout-insights' | 'program' | 'program-create' | 'template-create' | 'template-session' | 'my-workouts' | 'workout-history' | 'workout-session-detail' | 'habit-tracker' | 'habit-daily-insights' | 'habit-insights' | 'habit-create' | 'habit-edit' | 'achievements' | 'health-data-test' | 'cart' | 'activity-analytics' | 'onboarding' | 'personal-info' | 'create-post';
 
 function AuthenticatedLayout({
-  setCurrentScreen,
+  resetToScreen,
   currentScreen,
   children,
 }: {
-  setCurrentScreen: (s: ScreenKey) => void;
+  resetToScreen: (s: ScreenKey) => void;
   currentScreen: ScreenKey;
   children: React.ReactNode;
 }) {
@@ -71,7 +71,7 @@ function AuthenticatedLayout({
     return (
       <OnboardingScreen
         onComplete={async () => {
-          setCurrentScreen('track');
+          resetToScreen('track');
           await refreshProfile();
         }}
       />
@@ -86,7 +86,8 @@ export default function App() {
   // #endregion
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentScreen, setCurrentScreen] = useState<ScreenKey>('track');
+  const [screenStack, setScreenStack] = useState<ScreenKey[]>(['track']);
+  const currentScreen = screenStack[screenStack.length - 1];
   const [habitInsightsHabitId, setHabitInsightsHabitId] = useState<string | null>(null);
   const [habitInsightsDate, setHabitInsightsDate] = useState<string | null>(null);
   const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
@@ -96,11 +97,18 @@ export default function App() {
   const [sessionTemplateId, setSessionTemplateId] = useState<string | null>(null);
   const [sessionProgramId, setSessionProgramId] = useState<string | null>(null);
   const [sessionProgramDayId, setSessionProgramDayId] = useState<string | null>(null);
-  const [templateCreateReturnScreen, setTemplateCreateReturnScreen] = useState<'program' | 'workout' | 'track' | null>(null);
   const [workoutSessionId, setWorkoutSessionId] = useState<string | null>(null);
-  const [programReturnScreen, setProgramReturnScreen] = useState<'track' | 'workout'>('workout');
-  const [myWorkoutsReturnScreen, setMyWorkoutsReturnScreen] = useState<'track' | 'workout'>('workout');
-  const [workoutInsightsReturnScreen, setWorkoutInsightsReturnScreen] = useState<'track' | 'workout'>('workout');
+  const [trackActiveTab, setTrackActiveTab] = useState<string>('track');
+
+  const navigateTo = useCallback((screen: ScreenKey) => {
+    setScreenStack(prev => (prev[prev.length - 1] === screen ? prev : [...prev, screen]));
+  }, []);
+  const goBack = useCallback(() => {
+    setScreenStack(prev => (prev.length > 1 ? prev.slice(0, -1) : prev));
+  }, []);
+  const resetToScreen = useCallback((screen: ScreenKey) => {
+    setScreenStack([screen]);
+  }, []);
 
   // Nutrition State
   const [foodSearchMealType, setFoodSearchMealType] = useState<any>(null); // Type 'MealType' imported if needed, or just use any/string for now to avoid import loops if types are tricky without proper exports
@@ -114,16 +122,14 @@ export default function App() {
     setExerciseSearchVisible(true);
   };
 
-  const handleEditTemplate = (templateId: string, returnScreen: 'track' | 'workout' = 'workout') => {
+  const handleEditTemplate = (templateId: string, _returnScreen: 'track' | 'workout' = 'workout') => {
     setEditingTemplateId(templateId);
-    setTemplateCreateReturnScreen(returnScreen);
-    setCurrentScreen('template-create');
+    navigateTo('template-create');
   };
 
-  const handleCreateNewTemplate = (returnScreen: 'track' | 'workout' = 'workout') => {
+  const handleCreateNewTemplate = (_returnScreen: 'track' | 'workout' = 'workout') => {
     setEditingTemplateId(null);
-    setTemplateCreateReturnScreen(returnScreen);
-    setCurrentScreen('template-create');
+    navigateTo('template-create');
   };
 
   useEffect(() => {
@@ -133,10 +139,18 @@ export default function App() {
       // #endregion
       setSession(session);
       setLoading(false);
-    }).catch((err) => {
+    }).catch(async (err) => {
       // #region agent log
       _appLog('getSession error', { err: String(err), hypothesisId: 'H3' });
       // #endregion
+      const msg = err?.message ?? String(err);
+      const isInvalidRefreshToken =
+        (msg.includes('Refresh Token') && msg.includes('Not Found')) ||
+        msg.includes('Invalid Refresh Token');
+      if (isInvalidRefreshToken) {
+        await supabase.auth.signOut();
+        setSession(null);
+      }
       setLoading(false);
     });
 
@@ -152,98 +166,8 @@ export default function App() {
     if (!session || Platform.OS !== 'android') return;
 
     const onBackPress = () => {
-      if (currentScreen === 'cart') {
-        setCurrentScreen('track');
-        return true;
-      }
-      if (currentScreen === 'program-create') {
-        setCurrentScreen('program');
-        return true;
-      }
-      if (currentScreen === 'program') {
-        setCurrentScreen(programReturnScreen);
-        return true;
-      }
-      if (currentScreen === 'workout') {
-        setCurrentScreen('track');
-        return true;
-      }
-      if (currentScreen === 'workout-insights') {
-        setCurrentScreen(workoutInsightsReturnScreen);
-        return true;
-      }
-      if (currentScreen === 'sleep-tracker') {
-        setCurrentScreen('track');
-        return true;
-      }
-      if (currentScreen === 'nutrition-details') {
-        setCurrentScreen('track');
-        return true;
-      }
-      if (currentScreen === 'food-search') {
-        setCurrentScreen('nutrition-details');
-        return true;
-      }
-      if (currentScreen === 'habit-tracker') {
-        setCurrentScreen('track');
-        return true;
-      }
-      if (currentScreen === 'habit-daily-insights' || currentScreen === 'habit-insights' || currentScreen === 'habit-create' || currentScreen === 'habit-edit') {
-        setCurrentScreen('habit-tracker');
-        return true;
-      }
-      if (currentScreen === 'achievements') {
-        setCurrentScreen('track');
-        return true;
-      }
-      if (currentScreen === 'health-data-test') {
-        setCurrentScreen('track');
-        return true;
-      }
-      if (currentScreen === 'template-create') {
-        const returnTo = templateCreateReturnScreen ?? 'workout';
-        setEditingTemplateId(null);
-        setSessionProgramId(null);
-        setSessionProgramDayId(null);
-        setTemplateCreateReturnScreen(null);
-        setCurrentScreen(returnTo);
-        return true;
-      }
-      if (currentScreen === 'template-session') {
-        setSessionTemplateId(null);
-        setSessionProgramId(null);
-        setSessionProgramDayId(null);
-        const returnTo = templateCreateReturnScreen ?? 'workout';
-        setTemplateCreateReturnScreen(null);
-        setCurrentScreen(returnTo);
-        return true;
-      }
-      if (currentScreen === 'my-workouts') {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/873cbf59-1a11-4af9-aa21-381ba69693ce', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'App.tsx:hardwareBack', message: 'my-workouts back', data: { willSetScreen: myWorkoutsReturnScreen }, timestamp: Date.now(), hypothesisId: 'H1' }) }).catch(() => { });
-        // #endregion
-        setCurrentScreen(myWorkoutsReturnScreen);
-        return true;
-      }
-      if (currentScreen === 'workout-session-detail') {
-        setCurrentScreen('workout-history');
-        setWorkoutSessionId(null);
-        return true;
-      }
-      if (currentScreen === 'workout-history') {
-        setCurrentScreen('my-workouts');
-        return true;
-      }
-      if (currentScreen === 'activity-analytics') {
-        setCurrentScreen('workout');
-        return true;
-      }
-      if (currentScreen === 'personal-info') {
-        setCurrentScreen('track');
-        return true;
-      }
-      if (currentScreen === 'create-post') {
-        setCurrentScreen('track');
+      if (screenStack.length > 1) {
+        goBack();
         return true;
       }
       return false;
@@ -251,7 +175,7 @@ export default function App() {
 
     const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => sub.remove();
-  }, [session, currentScreen, programReturnScreen, myWorkoutsReturnScreen, workoutInsightsReturnScreen, templateCreateReturnScreen]);
+  }, [session, screenStack.length, goBack]);
 
   // Debug: Log sessionTemplateId changes
   useEffect(() => {
@@ -304,153 +228,124 @@ export default function App() {
           <NutritionProvider>
             <CartProvider>
               <ProfileProvider>
-                <AuthenticatedLayout setCurrentScreen={setCurrentScreen} currentScreen={currentScreen}>
+                <AuthenticatedLayout resetToScreen={resetToScreen} currentScreen={currentScreen}>
                   <StatusBar style="light" />
                   {currentScreen === 'track' ? (
                     <TrackHomeScreen
-                      onNavigateToWorkout={() => setCurrentScreen('workout')}
+                      activeTab={trackActiveTab}
+                      onTabChange={setTrackActiveTab}
+                      onNavigateToWorkout={() => navigateTo('workout')}
                       onStartTodayProgramWorkout={(payload) => {
                         React.startTransition(() => {
                           setSessionTemplateId(payload.templateId);
                           setSessionProgramId(payload.programId ?? null);
                           setSessionProgramDayId(payload.programDayId ?? null);
-                          setTemplateCreateReturnScreen('track');
-                          setCurrentScreen('template-session');
+                          navigateTo('template-session');
                         });
                       }}
-                      onNavigateToSleep={() => setCurrentScreen('sleep-tracker')}
-                      onNavigateToNutrition={() => setCurrentScreen('nutrition-details')}
-                      onNavigateToHabits={() => setCurrentScreen('habit-tracker')}
-                      onNavigateToCart={() => setCurrentScreen('cart')}
-                      onNavigateToPersonalInfo={() => setCurrentScreen('personal-info')}
-                      onNavigateToAchievements={() => setCurrentScreen('achievements')}
-                      onNavigateToCreatePost={() => setCurrentScreen('create-post')}
+                      onNavigateToSleep={() => navigateTo('sleep-tracker')}
+                      onNavigateToNutrition={() => navigateTo('nutrition-details')}
+                      onNavigateToHabits={() => navigateTo('habit-tracker')}
+                      onNavigateToCart={() => navigateTo('cart')}
+                      onNavigateToPersonalInfo={() => navigateTo('personal-info')}
+                      onNavigateToAchievements={() => navigateTo('achievements')}
+                      onNavigateToCreatePost={() => navigateTo('create-post')}
                       onSignOut={() => supabase.auth.signOut()}
-                      onNavigateToProgram={() => {
-                        setProgramReturnScreen('track');
-                        setCurrentScreen('program');
-                      }}
+                      onNavigateToProgram={() => navigateTo('program')}
                       onNavigateToTemplateCreate={() => handleCreateNewTemplate('track')}
-                      onNavigateToMyWorkouts={() => {
-                        // #region agent log
-                        fetch('http://127.0.0.1:7242/ingest/873cbf59-1a11-4af9-aa21-381ba69693ce', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'App.tsx:onNavigateToMyWorkouts', message: 'navigate to my-workouts', data: { from: 'track' }, timestamp: Date.now(), hypothesisId: 'H2' }) }).catch(() => { });
-                        // #endregion
-                        setMyWorkoutsReturnScreen('track');
-                        setCurrentScreen('my-workouts');
-                      }}
+                      onNavigateToMyWorkouts={() => navigateTo('my-workouts')}
                       onEditTemplate={(templateId: string) => handleEditTemplate(templateId, 'track')}
-                      onNavigateToWorkoutInsights={() => {
-                        setWorkoutInsightsReturnScreen('track');
-                        setCurrentScreen('workout-insights');
-                      }}
+                      onNavigateToWorkoutInsights={() => navigateTo('workout-insights')}
                     />
                   ) : currentScreen === 'create-post' ? (
-                    <CreatePostScreen navigation={{ goBack: () => setCurrentScreen('track') }} />
+                    <CreatePostScreen navigation={{ goBack }} />
                   ) : currentScreen === 'cart' ? (
-                    <CartScreen navigation={{ goBack: () => setCurrentScreen('track') }} />
+                    <CartScreen navigation={{ goBack }} />
                   ) : currentScreen === 'personal-info' ? (
-                    <PersonalInfoScreen onClose={() => setCurrentScreen('track')} />
+                    <PersonalInfoScreen onClose={goBack} />
                   ) : currentScreen === 'health-data-test' ? (
-                    <HealthDataTestScreen navigation={{ goBack: () => setCurrentScreen('track') }} />
+                    <HealthDataTestScreen navigation={{ goBack }} />
                   ) : currentScreen === 'sleep-tracker' ? (
-                    <SleepTrackerScreen navigation={{ goBack: () => setCurrentScreen('track') }} />
+                    <SleepTrackerScreen navigation={{ goBack }} />
                   ) : currentScreen === 'nutrition-details' ? (
                     <NutritionDetailsScreen
-                      navigation={{ goBack: () => setCurrentScreen('track') }}
+                      navigation={{ goBack }}
                       onNavigateToFoodSearch={(mealType) => {
                         setFoodSearchMealType(mealType);
-                        setCurrentScreen('food-search');
+                        navigateTo('food-search');
                       }}
                     />
                   ) : currentScreen === 'food-search' ? (
                     <FoodSearchScreen
-                      onClose={() => setCurrentScreen('nutrition-details')}
+                      onClose={goBack}
                       mealType={foodSearchMealType}
-                      onAddFood={async (food) => {
-                        // We'll handle the add inside the screen or here?
-                        // The screen itself can use context since it's inside provider.
-                        // So we just close it here or handle 'success' toast?
-                        // Actually FoodSearchScreen doesn't existing in context yet effectively? 
-                        // No, it is inside NutritionProvider.
-                        // Let's pass a dummy callback if the screen handles it, or handle it here if we want App to orchestrate.
-                        // But App doesn't use nutrition hook.
-                        // So let the screen handle it.
-                        setCurrentScreen('nutrition-details');
+                      onAddFood={async () => {
+                        navigateTo('nutrition-details');
                       }}
                     />
                   ) : currentScreen === 'habit-tracker' ? (
                     <HabitTrackerScreen
-                      navigation={{ goBack: () => setCurrentScreen('track') }}
+                      navigation={{ goBack }}
                       onNavigateToHabitInsights={(habitId) => {
                         setHabitInsightsHabitId(habitId);
                         const today = new Date();
                         setHabitInsightsDate(today.toISOString().slice(0, 10));
-                        setCurrentScreen('habit-insights');
+                        navigateTo('habit-insights');
                       }}
-                      onNavigateToCreateHabit={() => setCurrentScreen('habit-create')}
-                      onNavigateToEditHabit={(habitId) => { setEditingHabitId(habitId); setCurrentScreen('habit-edit'); }}
-                      onNavigateToDailyInsights={() => setCurrentScreen('habit-daily-insights')}
+                      onNavigateToCreateHabit={() => navigateTo('habit-create')}
+                      onNavigateToEditHabit={(habitId) => { setEditingHabitId(habitId); navigateTo('habit-edit'); }}
+                      onNavigateToDailyInsights={() => navigateTo('habit-daily-insights')}
                     />
                   ) : currentScreen === 'habit-daily-insights' ? (
-                    <HabitDailyInsightsScreen navigation={{ goBack: () => setCurrentScreen('habit-tracker') }} />
+                    <HabitDailyInsightsScreen navigation={{ goBack }} />
                   ) : currentScreen === 'habit-insights' ? (
                     <HabitInsightsScreen
-                      navigation={{ goBack: () => { setCurrentScreen('habit-tracker'); setHabitInsightsHabitId(null); setHabitInsightsDate(null); } }}
+                      navigation={{ goBack: () => { setHabitInsightsHabitId(null); setHabitInsightsDate(null); goBack(); } }}
                       habitId={habitInsightsHabitId}
                       initialDate={habitInsightsDate}
-                      onNavigateToEditHabit={(habitId) => { setEditingHabitId(habitId); setCurrentScreen('habit-edit'); }}
+                      onNavigateToEditHabit={(habitId) => { setEditingHabitId(habitId); navigateTo('habit-edit'); }}
                     />
                   ) : currentScreen === 'habit-create' ? (
-                    <CreateHabitScreen navigation={{ goBack: () => setCurrentScreen('habit-tracker') }} />
+                    <CreateHabitScreen navigation={{ goBack }} />
                   ) : currentScreen === 'habit-edit' ? (
                     <EditHabitScreen
                       habitId={editingHabitId}
-                      navigation={{ goBack: () => { setEditingHabitId(null); setCurrentScreen('habit-tracker'); } }}
+                      navigation={{ goBack: () => { setEditingHabitId(null); goBack(); } }}
                     />
                   ) : currentScreen === 'achievements' ? (
-                    <AchievementsScreen navigation={{ goBack: () => setCurrentScreen('track') }} />
+                    <AchievementsScreen navigation={{ goBack }} />
                   ) : currentScreen === 'workout-insights' ? (
-                    <WorkoutInsightsScreen navigation={{ goBack: () => setCurrentScreen(workoutInsightsReturnScreen) }} />
+                    <WorkoutInsightsScreen navigation={{ goBack }} />
                   ) : currentScreen === 'workout' ? (
                     <WorkoutTrackerScreen
-                      navigation={{ goBack: () => setCurrentScreen('track') }}
-                      onNavigateToProgram={() => {
-                        setProgramReturnScreen('workout');
-                        setCurrentScreen('program');
-                      }}
+                      navigation={{ goBack }}
+                      onNavigateToProgram={() => navigateTo('program')}
                       onNavigateToTemplateCreate={() => handleCreateNewTemplate('workout')}
-                      onNavigateToMyWorkouts={() => {
-                        setMyWorkoutsReturnScreen('workout');
-                        setCurrentScreen('my-workouts');
-                      }}
+                      onNavigateToMyWorkouts={() => navigateTo('my-workouts')}
                       onEditTemplate={(templateId: string) => handleEditTemplate(templateId, 'workout')}
-                      onNavigateToWorkoutInsights={() => {
-                        setWorkoutInsightsReturnScreen('workout');
-                        setCurrentScreen('workout-insights');
-                      }}
+                      onNavigateToWorkoutInsights={() => navigateTo('workout-insights')}
                     />
                   ) : currentScreen === 'onboarding' ? (
-                    <OnboardingScreen onComplete={() => setCurrentScreen('track')} />
+                    <OnboardingScreen onComplete={() => resetToScreen('track')} />
                   ) : currentScreen === 'activity-analytics' ? (
                     <ActivityAnalyticsScreen
                       initialTab={analyticsInitialTab}
-                      navigation={{ goBack: () => setCurrentScreen('workout') }}
+                      navigation={{ goBack }}
                     />
                   ) : currentScreen === 'program-create' ? (
                     <CreateProgramScreen
-                      navigation={{ goBack: () => setCurrentScreen('program') }}
-                      onSuccess={() => setCurrentScreen('program')}
+                      navigation={{ goBack }}
+                      onSuccess={() => goBack()}
                     />
                   ) : currentScreen === 'program' ? (
                     <ProgramScreen
-                      navigation={{ goBack: () => setCurrentScreen(programReturnScreen) }}
+                      navigation={{ goBack }}
                       onViewProgramDay={(payload) => {
                         React.startTransition(() => {
                           setEditingTemplateId(payload.templateId);
                           setSessionProgramId(payload.programId ?? null);
                           setSessionProgramDayId(payload.programDayId ?? null);
-                          setTemplateCreateReturnScreen('program');
-                          setCurrentScreen('template-create');
+                          navigateTo('template-create');
                         });
                       }}
                       onStartProgramDay={(payload) => {
@@ -458,21 +353,19 @@ export default function App() {
                           setSessionTemplateId(payload.templateId);
                           setSessionProgramId(payload.programId ?? null);
                           setSessionProgramDayId(payload.programDayId ?? null);
-                          setCurrentScreen('template-session');
+                          navigateTo('template-session');
                         });
                       }}
-                      onCreateProgram={() => setCurrentScreen('program-create')}
+                      onCreateProgram={() => navigateTo('program-create')}
                     />
                   ) : currentScreen === 'template-create' ? (
                     <TemplateCreateScreen
                       navigation={{
                         goBack: () => {
-                          const returnTo = templateCreateReturnScreen ?? 'workout';
                           setEditingTemplateId(null);
                           setSessionProgramId(null);
                           setSessionProgramDayId(null);
-                          setTemplateCreateReturnScreen(null);
-                          setCurrentScreen(returnTo);
+                          goBack();
                         }
                       }}
                       onStartSession={() => {
@@ -480,7 +373,7 @@ export default function App() {
                         if (editingTemplateId) {
                           React.startTransition(() => {
                             setSessionTemplateId(editingTemplateId);
-                            setCurrentScreen('template-session');
+                            navigateTo('template-session');
                           });
                         } else {
                           console.error('App: Cannot start session - no editingTemplateId');
@@ -491,36 +384,29 @@ export default function App() {
                     />
                   ) : currentScreen === 'my-workouts' ? (
                     <MyWorkoutsScreen
-                      navigation={{
-                        goBack: () => {
-                          // #region agent log
-                          fetch('http://127.0.0.1:7242/ingest/873cbf59-1a11-4af9-aa21-381ba69693ce', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'App.tsx:MyWorkoutsScreen.goBack', message: 'MyWorkoutsScreen goBack', data: { willSetScreen: myWorkoutsReturnScreen }, timestamp: Date.now(), hypothesisId: 'H1' }) }).catch(() => { });
-                          // #endregion
-                          setCurrentScreen(myWorkoutsReturnScreen);
-                        },
-                      }}
-                      onNavigateToWorkoutHistory={() => setCurrentScreen('workout-history')}
+                      navigation={{ goBack }}
+                      onNavigateToWorkoutHistory={() => navigateTo('workout-history')}
                       onCreateNew={handleCreateNewTemplate}
                       onStartTemplate={(templateId) => {
                         React.startTransition(() => {
                           setSessionTemplateId(templateId);
-                          setCurrentScreen('template-session');
+                          navigateTo('template-session');
                         });
                       }}
                       onEditTemplate={handleEditTemplate}
                     />
                   ) : currentScreen === 'workout-history' ? (
                     <WorkoutHistoryScreen
-                      navigation={{ goBack: () => setCurrentScreen('my-workouts') }}
+                      navigation={{ goBack }}
                       onSessionPress={(sessionId) => {
                         setWorkoutSessionId(sessionId);
-                        setCurrentScreen('workout-session-detail');
+                        navigateTo('workout-session-detail');
                       }}
                     />
                   ) : currentScreen === 'workout-session-detail' ? (
                     <WorkoutSessionDetailScreen
                       sessionId={workoutSessionId}
-                      navigation={{ goBack: () => { setCurrentScreen('workout-history'); setWorkoutSessionId(null); } }}
+                      navigation={{ goBack: () => { setWorkoutSessionId(null); goBack(); } }}
                     />
                   ) : currentScreen === 'template-session' ? (
                     sessionTemplateId ? (
@@ -533,9 +419,7 @@ export default function App() {
                             setSessionTemplateId(null);
                             setSessionProgramId(null);
                             setSessionProgramDayId(null);
-                            const returnTo = templateCreateReturnScreen ?? 'workout';
-                            setTemplateCreateReturnScreen(null);
-                            setCurrentScreen(returnTo);
+                            goBack();
                           },
                         }}
                         onAddExercise={openExerciseSearch}
@@ -548,21 +432,12 @@ export default function App() {
                     )
                   ) : (
                     <WorkoutTrackerScreen
-                      navigation={{ goBack: () => setCurrentScreen('track') }}
-                      onNavigateToProgram={() => {
-                        setProgramReturnScreen('workout');
-                        setCurrentScreen('program');
-                      }}
+                      navigation={{ goBack }}
+                      onNavigateToProgram={() => navigateTo('program')}
                       onNavigateToTemplateCreate={() => handleCreateNewTemplate('workout')}
-                      onNavigateToMyWorkouts={() => {
-                        setMyWorkoutsReturnScreen('workout');
-                        setCurrentScreen('my-workouts');
-                      }}
+                      onNavigateToMyWorkouts={() => navigateTo('my-workouts')}
                       onEditTemplate={(templateId: string) => handleEditTemplate(templateId, 'workout')}
-                      onNavigateToWorkoutInsights={() => {
-                        setWorkoutInsightsReturnScreen('workout');
-                        setCurrentScreen('workout-insights');
-                      }}
+                      onNavigateToWorkoutInsights={() => navigateTo('workout-insights')}
                     />
                   )}
 
