@@ -26,6 +26,8 @@ type TemplateRow = {
   workout_template_exercises: { count: number }[];
   difficulty_level?: string;
   estimated_duration?: number;
+  activity_type?: string | null;
+  activity_type_tags?: string[] | null;
 };
 
 function exerciseCount(row: TemplateRow): number {
@@ -106,7 +108,7 @@ export function MyWorkoutsScreen({
                   contentContainerStyle={styles.recentScroll}
                 >
                   {recent.map((t) => (
-                    <Pressable key={t.id} onPress={() => onEditTemplate?.(t.id)}>
+                    <Pressable key={t.id} onPress={() => onStartTemplate?.(t.id)}>
                       <LinearGradient
                         colors={['#424242', '#18181b']}
                         start={{ x: 0, y: 0 }}
@@ -114,7 +116,7 @@ export function MyWorkoutsScreen({
                         style={[styles.templateCard, { width: Dimensions.get('window').width * 0.42 }]}
                       >
                         <View style={styles.difficultyTag}>
-                          <Text style={[styles.difficultyText, { color: colors.actionAmber }]}>{t.difficulty_level || 'General'}</Text>
+                          <Text style={[styles.difficultyText, { color: colors.actionAmber }]}>{t.difficulty_level ?? '--'}</Text>
                         </View>
                         <Text style={styles.templateTitle} numberOfLines={2}>{t.title}</Text>
 
@@ -122,10 +124,6 @@ export function MyWorkoutsScreen({
                           <View style={styles.statRow}>
                             <MaterialCommunityIcons name="dumbbell" size={14} color={colors.textTertiary} />
                             <Text style={styles.statText}>{exerciseCount(t)} Exercises</Text>
-                          </View>
-                          <View style={styles.statRow}>
-                            <MaterialCommunityIcons name="clock-time-four-outline" size={14} color={colors.textTertiary} />
-                            <Text style={styles.statText}>{t.estimated_duration ? `${t.estimated_duration}m` : 'N/A'}</Text>
                           </View>
                         </View>
                       </LinearGradient>
@@ -150,7 +148,7 @@ export function MyWorkoutsScreen({
                 </View>
               ) : (
                 filtered.map((t) => (
-                  <Pressable key={t.id} onPress={() => onEditTemplate?.(t.id)}>
+                  <Pressable key={t.id} onPress={() => onStartTemplate?.(t.id)}>
                     <LinearGradient
                       colors={['#424242', '#18181b']}
                       start={{ x: 0, y: 0 }}
@@ -164,6 +162,14 @@ export function MyWorkoutsScreen({
                         <Text style={styles.listTitle}>{t.title}</Text>
                         <View style={styles.listMeta}>
                           <Text style={styles.listMetaGray}>{exerciseCount(t)} exercises</Text>
+                          {t.activity_type === 'hybrid' && t.activity_type_tags?.length ? (
+                            <>
+                              <Text style={styles.listDot}> • </Text>
+                              <Text style={styles.listMetaGray}>
+                                Hybrid ({t.activity_type_tags.map((tag) => tag.charAt(0).toUpperCase() + tag.slice(1)).join(', ')})
+                              </Text>
+                            </>
+                          ) : null}
                           {t.updated_at ? (
                             <>
                               <Text style={styles.listDot}> • </Text>

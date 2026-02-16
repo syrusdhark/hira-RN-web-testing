@@ -84,7 +84,7 @@ export function WorkoutSessionDetailScreen({
   const exercisesForIntensity = useMemo(() => {
     if (!session?.exercises?.length) return [];
     return session.exercises.map((ex) => ({
-      name: ex.exercise_name,
+      name: ex.exercise_name ?? '--',
       sets: ex.sets.map((s) => ({
         reps: s.reps ?? 0,
         weight: s.weight ?? 0,
@@ -145,12 +145,6 @@ export function WorkoutSessionDetailScreen({
         <View style={styles.summaryCard}>
           <Text style={styles.summaryDate}>{formatDetailDate(session.performed_at)}</Text>
           <View style={styles.summaryRow}>
-            {session.duration_minutes != null && (
-              <View style={styles.summaryItem}>
-                <MaterialCommunityIcons name="clock-outline" size={18} color={colors.textTertiary} />
-                <Text style={styles.summaryText}>{session.duration_minutes} min</Text>
-              </View>
-            )}
             {session.calories_burned != null && (
               <View style={styles.summaryItem}>
                 <MaterialCommunityIcons name="fire" size={18} color={colors.textTertiary} />
@@ -206,7 +200,7 @@ export function WorkoutSessionDetailScreen({
 
         {session.exercises.map((ex) => (
           <View key={ex.id} style={styles.exerciseBlock}>
-            <Text style={styles.exerciseName}>{ex.exercise_name}</Text>
+            <Text style={styles.exerciseName}>{ex.exercise_name ?? '--'}</Text>
             <View style={styles.setsTable}>
               <View style={styles.setRowHeader}>
                 <Text style={[styles.setCell, styles.setCellHeader]}>Set</Text>

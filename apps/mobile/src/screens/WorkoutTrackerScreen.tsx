@@ -14,6 +14,9 @@ import {
 
 import { supabase } from '../lib/supabase';
 import { useWorkoutTemplates } from '../hooks/useWorkoutTemplates';
+import { useExercises } from '../hooks/useExerciseSearch';
+import { useProgramSchedule } from '../hooks/useProgramSchedule';
+import { useUserStreaks } from '../hooks/useUserStreaks';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, radius, space, typography } from '../theme';
@@ -33,8 +36,13 @@ type WorkoutTrackerScreenProps = {
   onNavigateToProgram?: () => void;
   onNavigateToTemplateCreate?: () => void;
   onNavigateToMyWorkouts?: () => void;
+  onNavigateToActivityType?: (activityType: string) => void;
+  onStartTemplate?: (templateId: string) => void;
   onEditTemplate?: (templateId: string) => void;
   onNavigateToWorkoutInsights?: () => void;
+  onOpenExerciseDetail?: (exerciseId: string, exerciseName: string) => void;
+  onNavigateToExercises?: () => void;
+  onNavigateToProfile?: () => void;
   showBackButton?: boolean;
 };
 
@@ -43,18 +51,31 @@ export function WorkoutTrackerScreen({
   onNavigateToProgram,
   onNavigateToTemplateCreate,
   onNavigateToMyWorkouts,
+  onNavigateToActivityType,
+  onStartTemplate,
   onEditTemplate,
   onNavigateToWorkoutInsights,
+  onOpenExerciseDetail,
+  onNavigateToExercises,
+  onNavigateToProfile,
   showBackButton = true,
 }: WorkoutTrackerScreenProps) {
   const paddingTop = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) + 16 : 56;
   const cardWidth = Dimensions.get('window').width * 0.45;
   const activityTypeCardWidth = Dimensions.get('window').width * 0.40;
   const activityTypeCardHeight = 140;
-  const dayNumber = new Date().getDate();
+  const { data: streaks = [], isLoading: streaksLoading } = useUserStreaks();
+  const mainStreak = streaks.find((s) => s.streak_type === 'workout' || s.streak_type === 'overall');
+  const streakDisplay = streaksLoading ? '--' : String(mainStreak?.current_streak ?? 0);
+  const { data: scheduleData } = useProgramSchedule();
+  const moveCardTitle = scheduleData?.program?.title?.trim()
+    ? scheduleData.program.title
+    : 'Create your own program';
   const { data, isLoading } = useWorkoutTemplates();
   const templates = (data || []).slice(0, 5);
   const loading = isLoading;
+  const { data: exercisesList = [], isLoading: exercisesLoading } = useExercises();
+  const exercisesCarouselSlice = exercisesList.slice(0, 12);
 
   return (
     <View style={styles.container}>
@@ -68,21 +89,63 @@ export function WorkoutTrackerScreen({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.streakDayRow}>
-          <MaterialCommunityIcons name="fire" size={22} color={colors.actionAmber} />
-          <Text style={styles.streakDayNumber}>{dayNumber}</Text>
+          <View style={styles.streakDayLeft} />
+          <View style={styles.streakDayRight}>
+            <MaterialCommunityIcons name="fire" size={22} color={colors.actionAmber} />
+            <Text style={styles.streakDayNumber}>{streakDisplay}</Text>
+            <Pressable
+              onPress={() => onNavigateToProfile?.()}
+              style={({ pressed }) => [styles.profileIconButton, pressed && { opacity: 0.85 }]}
+              accessibilityLabel="Profile"
+            >
+              <MaterialCommunityIcons name="account-circle-outline" size={28} color={colors.textPrimary} />
+            </Pressable>
+          </View>
         </View>
         <View style={styles.moveCardWrap}>
           <NextWorkoutCard
             fullWidth
             title="MOVE"
             onPress={onNavigateToProgram}
-            workoutName="Create your own program"
+            workoutName={moveCardTitle}
             hideSubtitle
             hideCta
           />
         </View>
 
-        {/* Start Workout Action */}
+        {/* Exercises */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>Exercises</Text>
+          <Pressable onPress={onNavigateToExercises}>
+            <Text style={styles.seeAll}>See all</Text>
+          </Pressable>
+        </View>
+        <View style={styles.exercisesSection}>
+          {exercisesLoading ? (
+            <ActivityIndicator color={colors.bodyOrange} style={{ marginVertical: space.lg }} />
+          ) : exercisesCarouselSlice.length === 0 ? (
+            <Text style={styles.exercisesPlaceholder}>No exercises found.</Text>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.exerciseCarouselContent}
+            >
+              {exercisesCarouselSlice.map((ex) => (
+                <Pressable
+                  key={ex.id}
+                  style={({ pressed }) => [styles.exerciseBox, { width: activityTypeCardWidth, height: activityTypeCardHeight }, pressed && styles.exerciseBoxPressed]}
+                  onPress={() => onOpenExerciseDetail?.(ex.id, ex.name ?? '')}
+                >
+                  <Text style={styles.exerciseBoxTitle} numberOfLines={2}>{ex.name}</Text>
+                  {ex.exercise_type ? (
+                    <Text style={styles.exerciseBoxMeta} numberOfLines={1}>{ex.exercise_type}</Text>
+                  ) : null}
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
+        </View>
 
         {/* Activity Types */}
         <View style={styles.sectionHeaderRow}>
@@ -94,26 +157,31 @@ export function WorkoutTrackerScreen({
           contentContainerStyle={styles.activityTypesScroll}
         >
           {ACTIVITY_TYPES.map((item, index) => (
-            <ImageBackground
+            <Pressable
               key={index}
-              source={item.source}
-              resizeMode="cover"
-              style={[styles.activityTypeBox, { width: activityTypeCardWidth, height: activityTypeCardHeight }]}
-              imageStyle={styles.activityTypeImage}
+              onPress={() => onNavigateToActivityType?.(item.title)}
+              style={({ pressed }) => [pressed && { opacity: 0.9 }]}
             >
-              <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.8)']}
-                style={styles.activityTypeTitleWrap}
+              <ImageBackground
+                source={item.source}
+                resizeMode="cover"
+                style={[styles.activityTypeBox, { width: activityTypeCardWidth, height: activityTypeCardHeight }]}
+                imageStyle={styles.activityTypeImage}
               >
-                <Text style={styles.activityTypeTitle}>{item.title}</Text>
-              </LinearGradient>
-            </ImageBackground>
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.8)']}
+                  style={styles.activityTypeTitleWrap}
+                >
+                  <Text style={styles.activityTypeTitle}>{item.title}</Text>
+                </LinearGradient>
+              </ImageBackground>
+            </Pressable>
           ))}
         </ScrollView>
 
-        {/* My Workouts */}
+        {/* Workouts */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>My Workouts</Text>
+          <Text style={styles.sectionTitle}>Workouts</Text>
           <Pressable onPress={onNavigateToMyWorkouts}>
             <Text style={styles.seeAll}>See all</Text>
           </Pressable>
@@ -130,15 +198,15 @@ export function WorkoutTrackerScreen({
             <Text style={{ color: colors.textSecondary, marginLeft: space.md }}>No workouts found. Create one to get started!</Text>
           ) : (
             templates.map(t => (
-              <Pressable key={t.id} onPress={() => onEditTemplate?.(t.id)}>
+              <Pressable key={t.id} onPress={() => onStartTemplate?.(t.id)}>
                 <LinearGradient
                   colors={['#424242', '#18181b']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 0, y: 1 }}
-                  style={[styles.templateCard, { width: Dimensions.get('window').width * 0.42 }]}
+                  style={[styles.templateCard, { width: activityTypeCardWidth, height: activityTypeCardHeight }]}
                 >
                   <View style={styles.difficultyTag}>
-                    <Text style={[styles.difficultyText, { color: colors.actionAmber }]}>{t.difficulty_level || 'General'}</Text>
+                    <Text style={[styles.difficultyText, { color: colors.actionAmber }]}>{t.difficulty_level ?? '--'}</Text>
                   </View>
                   <Text style={styles.templateTitle} numberOfLines={2}>{t.title}</Text>
 
@@ -146,10 +214,6 @@ export function WorkoutTrackerScreen({
                     <View style={styles.statRow}>
                       <MaterialCommunityIcons name="dumbbell" size={14} color={colors.textTertiary} />
                       <Text style={styles.statText}>{t.workout_template_exercises?.[0]?.count || 0} Exercises</Text>
-                    </View>
-                    <View style={styles.statRow}>
-                      <MaterialCommunityIcons name="clock-time-four-outline" size={14} color={colors.textTertiary} />
-                      <Text style={styles.statText}>{t.estimated_duration ? `${t.estimated_duration}m` : 'N/A'}</Text>
                     </View>
                   </View>
                 </LinearGradient>
@@ -220,7 +284,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: space.md,
-    paddingBottom: space.md,
+    paddingBottom: space.xs,
     alignItems: 'center',
   },
   headerLeft: { width: 40 },
@@ -248,13 +312,25 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: space.md,
-    paddingTop: space.xl,
+    paddingTop: space.sm,
   },
   streakDayRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.xs,
+    justifyContent: 'space-between',
     marginBottom: space.sm,
+  },
+  streakDayLeft: {
+    minWidth: 1,
+  },
+  profileIconButton: {
+    padding: space.xs,
+    marginRight: -space.xs,
+  },
+  streakDayRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs,
   },
   streakDayNumber: {
     color: colors.textPrimary,
@@ -264,6 +340,40 @@ const styles = StyleSheet.create({
   moveCardWrap: {
     marginTop: space.lg,
     marginBottom: space.lg,
+  },
+  exercisesSection: {
+    paddingVertical: space.md,
+    paddingHorizontal: 0,
+    marginBottom: space.lg,
+  },
+  exerciseCarouselContent: {
+    gap: space.md,
+    paddingRight: space.md,
+  },
+  exerciseBox: {
+    backgroundColor: colors.bgCharcoal,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    padding: space.md,
+    justifyContent: 'flex-end',
+  },
+  exerciseBoxPressed: {
+    opacity: 0.85,
+  },
+  exerciseBoxTitle: {
+    ...typography.sm,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: space['2xs'],
+  },
+  exerciseBoxMeta: {
+    ...typography.xs,
+    color: colors.textTertiary,
+  },
+  exercisesPlaceholder: {
+    ...typography.sm,
+    color: colors.textTertiary,
   },
   mainCard: {
     backgroundColor: colors.bgCharcoal,
@@ -471,6 +581,7 @@ const styles = StyleSheet.create({
     padding: space.md,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
+    justifyContent: 'space-between',
   },
   difficultyTag: {
     alignSelf: 'flex-start',
@@ -486,14 +597,13 @@ const styles = StyleSheet.create({
   },
   templateTitle: {
     color: colors.textPrimary,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
+    flex: 1,
     marginBottom: space.sm,
-    height: 44, // 2 lines roughly
   },
   templateStats: {
     gap: 6,
-    marginBottom: space.md,
   },
   statRow: {
     flexDirection: 'row',

@@ -186,7 +186,7 @@ export function ProgramScreen({ navigation, onStartProgramDay, onViewProgramDay,
             return (
               <View key={ex.id} style={styles.dropdownExercise}>
                 <Text style={styles.dropdownExerciseName} numberOfLines={1}>
-                  {ex.exercise_name ?? 'Exercise'}
+                  {ex.exercise_name ?? '--'}
                 </Text>
                 <Text style={styles.dropdownSetText}>{setsRepsText}</Text>
               </View>

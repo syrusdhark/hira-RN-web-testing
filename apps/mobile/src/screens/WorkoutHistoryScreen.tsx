@@ -159,12 +159,6 @@ export function WorkoutHistoryScreen({
                       <Text style={styles.cardTitle}>{session.title}</Text>
                       <Text style={styles.cardSubtitle}>{formatDateShort(session.performed_at)}</Text>
                       <View style={styles.badgesRow}>
-                        {session.duration_minutes != null && (
-                          <View style={styles.badge}>
-                            <MaterialCommunityIcons name="clock-outline" size={12} color={colors.textTertiary} />
-                            <Text style={styles.badgeText}>{session.duration_minutes}m</Text>
-                          </View>
-                        )}
                         {session.calories_burned != null && (
                           <View style={styles.badge}>
                             <MaterialCommunityIcons name="fire" size={12} color={colors.textTertiary} />

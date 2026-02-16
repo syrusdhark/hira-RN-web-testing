@@ -21,18 +21,22 @@ type ExerciseSearchScreenProps = {
         id: string;
         name: string;
         category: string;
+        exercise_type: string | null;
         difficulty_level: string;
         equipment: string;
         muscles?: string[];
     }) => void;
 };
 
-const CATEGORIES = [
+const EXERCISE_TYPES = [
     { id: 'all', label: 'All', color: colors.bodyOrange },
-    { id: 'chest', label: 'Chest', color: colors.primaryIndigo },
-    { id: 'back', label: 'Back', color: colors.primaryViolet },
-    { id: 'legs', label: 'Legs', color: colors.healthGreen },
-    { id: 'cardio', label: 'Cardio', color: colors.actionAmber },
+    { id: 'bodybuilding', label: 'Bodybuilding', color: colors.primaryIndigo },
+    { id: 'strength', label: 'Strength', color: colors.primaryViolet },
+    { id: 'yoga', label: 'Yoga', color: colors.healthGreen },
+    { id: 'stretch', label: 'Stretch', color: colors.actionAmber },
+    { id: 'rest', label: 'Rest', color: colors.textTertiary },
+    { id: 'calisthenics', label: 'Calisthenics', color: colors.bodyOrange },
+    { id: 'hybrid', label: 'Hybrid', color: colors.brandBlue },
 ];
 
 export function ExerciseSearchScreen({ onClose, onSelectExercise }: ExerciseSearchScreenProps) {
@@ -43,32 +47,17 @@ export function ExerciseSearchScreen({ onClose, onSelectExercise }: ExerciseSear
     // Updated destructuring to match hook return
     const { exercises, isLoading } = useExerciseSearch(searchQuery);
 
-    // Filter by category
+    // Filter by exercise type
     const filteredExercises = exercises?.filter(ex => {
         if (selectedCategory === 'all') return true;
-
-        // Map category filter to exercise categories
-        if (selectedCategory === 'chest' || selectedCategory === 'back' || selectedCategory === 'legs') {
-            // Check if exercise muscles include the selected category
-            const muscles = ex.exercise_muscles?.map(m => m.muscle) || [];
-            const categoryMuscles: Record<string, string[]> = {
-                chest: ['Pectoralis Major', 'Pectoralis'],
-                back: ['Latissimus Dorsi', 'Rhomboids', 'Trapezius', 'Erector Spinae'],
-                legs: ['Quadriceps', 'Hamstrings', 'Gluteus', 'Gastrocnemius', 'Soleus'],
-            };
-            return muscles.some(m =>
-                categoryMuscles[selectedCategory]?.some(cm => m.includes(cm))
-            );
-        }
-
-        return ex.category === selectedCategory;
+        return ex.exercise_type === selectedCategory || (ex.exercise_type == null && ex.category === selectedCategory);
     }) || [];
 
     // Get top 3 exercises as suggestions
     const topSuggestions = filteredExercises.slice(0, 3);
 
-    // Recently viewed (mock for now - would come from local storage)
-    const recentlyViewed = exercises?.slice(0, 2) || [];
+    // Recently viewed: empty until we have local storage; all listed exercises come from DB
+    const recentlyViewed: any[] = [];
 
     const handleSelectExercise = (exercise: any) => {
         if (onSelectExercise) {
@@ -78,7 +67,8 @@ export function ExerciseSearchScreen({ onClose, onSelectExercise }: ExerciseSear
             onSelectExercise({
                 id: exercise.id,
                 name: exercise.name,
-                category: exercise.category,
+                category: exercise.category ?? '',
+                exercise_type: exercise.exercise_type ?? null,
                 difficulty_level: exercise.difficulty_level,
                 equipment: exercise.equipment,
                 muscles: muscles,
@@ -121,7 +111,7 @@ export function ExerciseSearchScreen({ onClose, onSelectExercise }: ExerciseSear
                     style={styles.categoriesScroll}
                     contentContainerStyle={styles.categoriesContainer}
                 >
-                    {CATEGORIES.map(cat => (
+                    {EXERCISE_TYPES.map(cat => (
                         <Pressable
                             key={cat.id}
                             style={[
@@ -187,7 +177,7 @@ export function ExerciseSearchScreen({ onClose, onSelectExercise }: ExerciseSear
                                 <View style={styles.exerciseInfo}>
                                     <Text style={styles.exerciseName}>{exercise.name}</Text>
                                     <View style={styles.exerciseMeta}>
-                                        <Text style={styles.metaText}>{exercise.category || 'Uncategorized'}</Text>
+                                        <Text style={styles.metaText}>{exercise.exercise_type || exercise.category || 'Uncategorized'}</Text>
                                         <View style={styles.metaDot} />
                                         <Text style={styles.metaText}>{exercise.equipment || 'No Equipment'}</Text>
                                         {exercise.exercise_muscles && exercise.exercise_muscles.length > 0 && (

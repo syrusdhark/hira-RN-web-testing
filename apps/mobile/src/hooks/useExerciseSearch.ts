@@ -8,6 +8,7 @@ interface Exercise {
     id: string;
     name: string;
     category: string | null;
+    exercise_type: string | null;
     difficulty_level: string | null;
     thumbnail_url: string | null;
     video_url: string | null;
@@ -66,8 +67,11 @@ export function useExerciseSearch(searchTerm: string) {
                 return true;
             }
 
-            // Match against category
+            // Match against category (legacy) and exercise_type
             if (exercise.category?.toLowerCase().includes(term)) {
+                return true;
+            }
+            if (exercise.exercise_type?.toLowerCase().includes(term)) {
                 return true;
             }
 

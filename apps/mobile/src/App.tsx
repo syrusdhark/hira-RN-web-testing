@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, BackHandler, Platform, Modal, Text } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Session } from '@supabase/supabase-js';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -33,8 +34,17 @@ import { NutritionProvider } from './context/NutritionContext';
 import { ActivityAnalyticsScreen } from './screens/ActivityAnalyticsScreen';
 import { WorkoutInsightsScreen } from './screens/WorkoutInsightsScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
+import { WelcomeSplashScreen } from './screens/WelcomeSplashScreen';
 import { PersonalInfoScreen } from './screens/PersonalInfoScreen';
+import { PreferencesScreen } from './screens/PreferencesScreen';
+import { IntegrationsScreen } from './screens/IntegrationsScreen';
+import { HelpSupportScreen } from './screens/HelpSupportScreen';
 import { CreatePostScreen } from './screens/CreatePostScreen';
+import { ActivityTypeWorkoutsScreen } from './screens/ActivityTypeWorkoutsScreen';
+import { ExerciseDetailScreen } from './screens/ExerciseDetailScreen';
+import { ExercisesScreen } from './screens/ExercisesScreen';
+import { AddExercisesForSessionScreen } from './screens/AddExercisesForSessionScreen';
+import { ProfileScreen } from './screens/ProfileScreen';
 
 import { CartProvider } from './context/CartContext';
 import { ProfileProvider, useProfile } from './context/ProfileContext';
@@ -48,7 +58,7 @@ const _appLog = (msg: string, data: Record<string, unknown>) => { const p = { lo
 
 const AuthStack = createNativeStackNavigator();
 
-type ScreenKey = 'track' | 'sleep-tracker' | 'nutrition-details' | 'food-search' | 'workout' | 'workout-insights' | 'program' | 'program-create' | 'template-create' | 'template-session' | 'my-workouts' | 'workout-history' | 'workout-session-detail' | 'habit-tracker' | 'habit-daily-insights' | 'habit-insights' | 'habit-create' | 'habit-edit' | 'achievements' | 'health-data-test' | 'cart' | 'activity-analytics' | 'onboarding' | 'personal-info' | 'create-post';
+type ScreenKey = 'track' | 'sleep-tracker' | 'nutrition-details' | 'food-search' | 'workout' | 'workout-insights' | 'program' | 'program-create' | 'template-create' | 'template-session' | 'add-exercises-for-session' | 'my-workouts' | 'activity-type-workouts' | 'exercises' | 'workout-history' | 'workout-session-detail' | 'exercise-detail' | 'habit-tracker' | 'habit-daily-insights' | 'habit-insights' | 'habit-create' | 'habit-edit' | 'achievements' | 'health-data-test' | 'cart' | 'activity-analytics' | 'onboarding' | 'personal-info' | 'create-post' | 'preferences' | 'integrations' | 'help-support' | 'profile';
 
 function AuthenticatedLayout({
   resetToScreen,
@@ -86,6 +96,7 @@ export default function App() {
   // #endregion
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasSeenWelcomeSplash, setHasSeenWelcomeSplash] = useState<boolean | null>(null);
   const [screenStack, setScreenStack] = useState<ScreenKey[]>(['track']);
   const currentScreen = screenStack[screenStack.length - 1];
   const [habitInsightsHabitId, setHabitInsightsHabitId] = useState<string | null>(null);
@@ -98,7 +109,11 @@ export default function App() {
   const [sessionProgramId, setSessionProgramId] = useState<string | null>(null);
   const [sessionProgramDayId, setSessionProgramDayId] = useState<string | null>(null);
   const [workoutSessionId, setWorkoutSessionId] = useState<string | null>(null);
+  const [exerciseDetailExerciseId, setExerciseDetailExerciseId] = useState<string | null>(null);
+  const [exerciseDetailExerciseName, setExerciseDetailExerciseName] = useState<string | null>(null);
+  const [sessionInitialExercises, setSessionInitialExercises] = useState<Array<{ name: string; muscle: string; exerciseId?: string | null }> | null>(null);
   const [trackActiveTab, setTrackActiveTab] = useState<string>('track');
+  const [activityTypeForScreen, setActivityTypeForScreen] = useState<string | null>(null);
 
   const navigateTo = useCallback((screen: ScreenKey) => {
     setScreenStack(prev => (prev[prev.length - 1] === screen ? prev : [...prev, screen]));
@@ -129,7 +144,9 @@ export default function App() {
 
   const handleCreateNewTemplate = (_returnScreen: 'track' | 'workout' = 'workout') => {
     setEditingTemplateId(null);
-    navigateTo('template-create');
+    setSessionTemplateId(null);
+    setSessionInitialExercises(null);
+    navigateTo('template-session');
   };
 
   useEffect(() => {
@@ -163,6 +180,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    AsyncStorage.getItem('@hira_hasSeenWelcomeSplash').then((value) => {
+      setHasSeenWelcomeSplash(value === 'true');
+    });
+  }, []);
+
+  useEffect(() => {
     if (!session || Platform.OS !== 'android') return;
 
     const onBackPress = () => {
@@ -181,6 +204,30 @@ export default function App() {
   useEffect(() => {
     console.log('App: sessionTemplateId changed to:', sessionTemplateId);
   }, [sessionTemplateId]);
+
+  if (hasSeenWelcomeSplash === null) {
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <View style={{ flex: 1, backgroundColor: colors.bgMidnight, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={colors.primaryViolet} />
+        </View>
+      </GestureHandlerRootView>
+    );
+  }
+
+  if (hasSeenWelcomeSplash === false) {
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <StatusBar style="light" />
+        <WelcomeSplashScreen
+          onComplete={async () => {
+            await AsyncStorage.setItem('@hira_hasSeenWelcomeSplash', 'true');
+            setHasSeenWelcomeSplash(true);
+          }}
+        />
+      </GestureHandlerRootView>
+    );
+  }
 
   if (loading) {
     // #region agent log
@@ -248,14 +295,43 @@ export default function App() {
                       onNavigateToHabits={() => navigateTo('habit-tracker')}
                       onNavigateToCart={() => navigateTo('cart')}
                       onNavigateToPersonalInfo={() => navigateTo('personal-info')}
+                      onNavigateToPreferences={() => navigateTo('preferences')}
+                      onNavigateToIntegrations={() => navigateTo('integrations')}
+                      onNavigateToHelpSupport={() => navigateTo('help-support')}
                       onNavigateToAchievements={() => navigateTo('achievements')}
                       onNavigateToCreatePost={() => navigateTo('create-post')}
                       onSignOut={() => supabase.auth.signOut()}
                       onNavigateToProgram={() => navigateTo('program')}
                       onNavigateToTemplateCreate={() => handleCreateNewTemplate('track')}
                       onNavigateToMyWorkouts={() => navigateTo('my-workouts')}
+                      onNavigateToActivityType={(type) => {
+                        setActivityTypeForScreen(type);
+                        navigateTo('activity-type-workouts');
+                      }}
+                      onStartTemplate={(templateId) => {
+                        setSessionTemplateId(templateId);
+                        setSessionInitialExercises(null);
+                        navigateTo('template-session');
+                      }}
                       onEditTemplate={(templateId: string) => handleEditTemplate(templateId, 'track')}
                       onNavigateToWorkoutInsights={() => navigateTo('workout-insights')}
+                      onOpenExerciseDetail={(id, name) => {
+                        setExerciseDetailExerciseId(id);
+                        setExerciseDetailExerciseName(name);
+                        navigateTo('exercise-detail');
+                      }}
+                      onNavigateToExercises={() => navigateTo('exercises')}
+                      onNavigateToProfile={() => navigateTo('profile')}
+                    />
+                  ) : currentScreen === 'profile' ? (
+                    <ProfileScreen
+                      navigation={{ goBack }}
+                      onPersonalInfo={() => navigateTo('personal-info')}
+                      onPreferences={() => navigateTo('preferences')}
+                      onIntegrations={() => navigateTo('integrations')}
+                      onHelpSupport={() => navigateTo('help-support')}
+                      onViewAllAchievements={() => navigateTo('achievements')}
+                      onSignOut={() => supabase.auth.signOut()}
                     />
                   ) : currentScreen === 'create-post' ? (
                     <CreatePostScreen navigation={{ goBack }} />
@@ -263,6 +339,12 @@ export default function App() {
                     <CartScreen navigation={{ goBack }} />
                   ) : currentScreen === 'personal-info' ? (
                     <PersonalInfoScreen onClose={goBack} />
+                  ) : currentScreen === 'preferences' ? (
+                    <PreferencesScreen navigation={{ goBack }} />
+                  ) : currentScreen === 'integrations' ? (
+                    <IntegrationsScreen navigation={{ goBack }} />
+                  ) : currentScreen === 'help-support' ? (
+                    <HelpSupportScreen navigation={{ goBack }} />
                   ) : currentScreen === 'health-data-test' ? (
                     <HealthDataTestScreen navigation={{ goBack }} />
                   ) : currentScreen === 'sleep-tracker' ? (
@@ -382,6 +464,38 @@ export default function App() {
                       onAddExercise={openExerciseSearch}
                       templateId={editingTemplateId}
                     />
+                  ) : currentScreen === 'exercises' ? (
+                    <ExercisesScreen
+                      navigation={{ goBack }}
+                      onOpenExerciseDetail={(id, name) => {
+                        setExerciseDetailExerciseId(id);
+                        setExerciseDetailExerciseName(name);
+                        navigateTo('exercise-detail');
+                      }}
+                    />
+                  ) : currentScreen === 'activity-type-workouts' ? (
+                    <ActivityTypeWorkoutsScreen
+                      navigation={{ goBack: () => { setActivityTypeForScreen(null); goBack(); } }}
+                      activityType={activityTypeForScreen ?? 'Workouts'}
+                      onStartTemplate={(templateId) => {
+                        React.startTransition(() => {
+                          setSessionTemplateId(templateId);
+                          setSessionInitialExercises(null);
+                          navigateTo('template-session');
+                        });
+                      }}
+                      onEditTemplate={handleEditTemplate}
+                    />
+                  ) : currentScreen === 'add-exercises-for-session' ? (
+                    <AddExercisesForSessionScreen
+                      navigation={{ goBack }}
+                      onStartWorkout={(exercises) => {
+                        setSessionInitialExercises(exercises);
+                        setSessionTemplateId(null);
+                        navigateTo('template-session');
+                      }}
+                      onAddExercise={openExerciseSearch}
+                    />
                   ) : currentScreen === 'my-workouts' ? (
                     <MyWorkoutsScreen
                       navigation={{ goBack }}
@@ -390,6 +504,7 @@ export default function App() {
                       onStartTemplate={(templateId) => {
                         React.startTransition(() => {
                           setSessionTemplateId(templateId);
+                          setSessionInitialExercises(null);
                           navigateTo('template-session');
                         });
                       }}
@@ -408,34 +523,56 @@ export default function App() {
                       sessionId={workoutSessionId}
                       navigation={{ goBack: () => { setWorkoutSessionId(null); goBack(); } }}
                     />
+                  ) : currentScreen === 'exercise-detail' ? (
+                    <ExerciseDetailScreen
+                      exerciseId={exerciseDetailExerciseId}
+                      exerciseName={exerciseDetailExerciseName ?? ''}
+                      navigation={{
+                        goBack: () => {
+                          setExerciseDetailExerciseId(null);
+                          setExerciseDetailExerciseName(null);
+                          goBack();
+                        },
+                      }}
+                    />
                   ) : currentScreen === 'template-session' ? (
-                    sessionTemplateId ? (
-                      <TemplateSessionScreen
-                        templateId={sessionTemplateId}
-                        workoutProgramId={sessionProgramId ?? undefined}
-                        workoutProgramDayId={sessionProgramDayId ?? undefined}
-                        navigation={{
-                          goBack: () => {
-                            setSessionTemplateId(null);
-                            setSessionProgramId(null);
-                            setSessionProgramDayId(null);
-                            goBack();
-                          },
-                        }}
-                        onAddExercise={openExerciseSearch}
-                      />
-                    ) : (
-                      <View style={{ flex: 1, backgroundColor: colors.bgMidnight, justifyContent: 'center', alignItems: 'center' }}>
-                        <ActivityIndicator size="large" color={colors.bodyOrange} />
-                        <Text style={{ color: colors.textPrimary, marginTop: 16 }}>Loading session...</Text>
-                      </View>
-                    )
+                    <TemplateSessionScreen
+                      templateId={sessionTemplateId}
+                      workoutProgramId={sessionProgramId ?? undefined}
+                      workoutProgramDayId={sessionProgramDayId ?? undefined}
+                      navigation={{
+                        goBack: () => {
+                          setSessionTemplateId(null);
+                          setSessionProgramId(null);
+                          setSessionProgramDayId(null);
+                          setSessionInitialExercises(null);
+                          goBack();
+                        },
+                      }}
+                      onAddExercise={openExerciseSearch}
+                      onPressExercise={(id, name) => {
+                        setExerciseDetailExerciseId(id);
+                        setExerciseDetailExerciseName(name);
+                        navigateTo('exercise-detail');
+                      }}
+                      initialExercises={sessionInitialExercises}
+                      onInitialExercisesConsumed={() => setSessionInitialExercises(null)}
+                    />
                   ) : (
                     <WorkoutTrackerScreen
                       navigation={{ goBack }}
                       onNavigateToProgram={() => navigateTo('program')}
                       onNavigateToTemplateCreate={() => handleCreateNewTemplate('workout')}
                       onNavigateToMyWorkouts={() => navigateTo('my-workouts')}
+                      onNavigateToActivityType={(type) => {
+                        setActivityTypeForScreen(type);
+                        navigateTo('activity-type-workouts');
+                      }}
+                      onStartTemplate={(templateId) => {
+                        setSessionTemplateId(templateId);
+                        setSessionInitialExercises(null);
+                        navigateTo('template-session');
+                      }}
                       onEditTemplate={(templateId: string) => handleEditTemplate(templateId, 'workout')}
                       onNavigateToWorkoutInsights={() => navigateTo('workout-insights')}
                     />

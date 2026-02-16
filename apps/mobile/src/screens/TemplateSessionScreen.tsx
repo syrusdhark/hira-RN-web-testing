@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Pressable, TextInput, ScrollView, Platform, StatusBar, ActivityIndicator, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, Text, View, Pressable, TextInput, ScrollView, Platform, StatusBar, ActivityIndicator, Alert, Modal, Dimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { colors, radius, space, typography } from '../theme';
@@ -16,6 +16,7 @@ interface Set {
     kg: string;
     reps: string;
     completed: boolean;
+    tag?: 'W' | 'F' | 'D' | null;
 }
 
 interface Exercise {
@@ -30,12 +31,30 @@ function generateId() {
     return Math.random().toString(36).slice(2);
 }
 
+/** Working set number resets to 1 after any set tagged 'W' (warm-up). */
+function getWorkingSetNumber(sets: Set[], index: number): number {
+    let lastWarmUpIndex = -1;
+    for (let i = 0; i < index; i++) {
+        if (sets[i].tag === 'W') lastWarmUpIndex = i;
+    }
+    return index - lastWarmUpIndex;
+}
+
+export type InitialExercise = {
+    name: string;
+    muscle: string;
+    exerciseId?: string | null;
+};
+
 export type TemplateSessionScreenProps = {
     templateId?: string | null;
     workoutProgramId?: string;
     workoutProgramDayId?: string;
     navigation: any;
     onAddExercise?: (cb: (exercise: any) => void) => void;
+    onPressExercise?: (exerciseId: string | null, exerciseName: string) => void;
+    initialExercises?: InitialExercise[] | null;
+    onInitialExercisesConsumed?: () => void;
 };
 
 export function TemplateSessionScreen({
@@ -44,22 +63,78 @@ export function TemplateSessionScreen({
     workoutProgramDayId,
     navigation,
     onAddExercise,
+    onPressExercise,
+    initialExercises,
+    onInitialExercisesConsumed,
 }: TemplateSessionScreenProps) {
     const queryClient = useQueryClient();
     const paddingTop = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 16 : 60;
     const [elapsedTime, setElapsedTime] = useState(0);
+    const [timerPaused, setTimerPaused] = useState(false);
     const [exercises, setExercises] = useState<Exercise[]>([]);
     const [sessionTitle, setSessionTitle] = useState<string>('Workout');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [exerciseMenuExerciseId, setExerciseMenuExerciseId] = useState<string | null>(null);
+    const [setTagMenuAnchor, setSetTagMenuAnchor] = useState<{ exerciseId: string; setId: string } | null>(null);
+    const [exerciseMenuPosition, setExerciseMenuPosition] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+    const [setTagMenuPosition, setSetTagMenuPosition] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+    const exerciseMenuButtonRefs = useRef<Record<string, View | null>>({});
+    const setTagButtonRefs = useRef<Record<string, View | null>>({});
+    const hasConsumedInitialExercises = useRef(false);
+
+    useEffect(() => {
+        if (!exerciseMenuExerciseId) {
+            setExerciseMenuPosition(null);
+            return;
+        }
+        const node = exerciseMenuButtonRefs.current[exerciseMenuExerciseId];
+        if (node && typeof (node as any).measureInWindow === 'function') {
+            (node as any).measureInWindow((x: number, y: number, w: number, h: number) => {
+                setExerciseMenuPosition({ x, y, w, h });
+            });
+        }
+    }, [exerciseMenuExerciseId]);
+
+    useEffect(() => {
+        if (!setTagMenuAnchor) {
+            setSetTagMenuPosition(null);
+            return;
+        }
+        const key = `${setTagMenuAnchor.exerciseId}-${setTagMenuAnchor.setId}`;
+        const node = setTagButtonRefs.current[key];
+        if (node && typeof (node as any).measureInWindow === 'function') {
+            (node as any).measureInWindow((x: number, y: number, w: number, h: number) => {
+                setSetTagMenuPosition({ x, y, w, h });
+            });
+        }
+    }, [setTagMenuAnchor]);
+
+    // When no templateId: stop loading; when initialExercises provided, apply once
+    useEffect(() => {
+        if (!templateId) {
+            setLoading(false);
+            if (initialExercises?.length && !hasConsumedInitialExercises.current) {
+                hasConsumedInitialExercises.current = true;
+                const mapped: Exercise[] = initialExercises.map((ex) => ({
+                    id: generateId(),
+                    name: ex.name,
+                    muscle: ex.muscle,
+                    sets: [{ id: generateId(), kg: '', reps: '', completed: false }],
+                    exerciseId: ex.exerciseId ?? null,
+                }));
+                setExercises(mapped);
+                setSessionTitle('Workout');
+                onInitialExercisesConsumed?.();
+            }
+        }
+    }, [templateId, initialExercises, onInitialExercisesConsumed]);
 
     useEffect(() => {
         let isActive = true;
 
         async function fetchTemplate() {
             if (!templateId) {
-                console.log('TemplateSessionScreen: No templateId yet');
-                // Keep loading = true, the useEffect will trigger again when templateId changes
                 return;
             }
 
@@ -74,13 +149,12 @@ export function TemplateSessionScreen({
                     return;
                 }
 
-                // Fetch template details
+                // Fetch template details (by id only; RLS determines visibility)
                 const { data: template, error: templateError } = await supabase
                     .from('workout_templates')
                     .select('id, title')
                     .eq('id', templateId)
-                    .eq('user_id', session.user.id)
-                    .single();
+                    .maybeSingle();
 
                 if (templateError) {
                     console.error('Error fetching template:', templateError);
@@ -99,7 +173,7 @@ export function TemplateSessionScreen({
                 // Fetch exercises (exercise_id for saving session log)
                 const { data: templateExercises, error: exercisesError } = await supabase
                     .from('workout_template_exercises')
-                    .select('id, exercise_id, exercise_name, order_index')
+                    .select('id, exercise_id, exercise_name, order_index, exercises(exercise_type)')
                     .eq('workout_template_id', templateId)
                     .order('order_index', { ascending: true });
 
@@ -117,6 +191,24 @@ export function TemplateSessionScreen({
                         setLoading(false);
                     }
                     return;
+                }
+
+                // Fallback: if join didn't return exercise_type, fetch by exercise_id
+                const missingIds = (templateExercises as any[])
+                    .filter((e: any) => e.exercise_id && !e.exercises?.exercise_type)
+                    .map((e: any) => e.exercise_id);
+                if (missingIds.length > 0) {
+                    const { data: exRows } = await supabase
+                        .from('exercises')
+                        .select('id, exercise_type')
+                        .in('id', missingIds);
+                    const typeById = new Map((exRows || []).map((r: any) => [r.id, r.exercise_type]));
+                    for (const e of templateExercises as any[]) {
+                        if (e.exercise_id && !e.exercises?.exercise_type) {
+                            const t = typeById.get(e.exercise_id);
+                            if (t) e.exercises = { ...(e.exercises || {}), exercise_type: t };
+                        }
+                    }
                 }
 
                 // Fetch sets
@@ -153,10 +245,14 @@ export function TemplateSessionScreen({
                             }))
                         : [{ id: generateId(), kg: '', reps: '', completed: false }];
 
+                    const exType = (exercise as any).exercises?.exercise_type;
+                    const muscleLabel = exType
+                        ? exType.charAt(0).toUpperCase() + exType.slice(1)
+                        : '--';
                     return {
                         id: generateId(),
-                        name: exercise.exercise_name || 'Exercise',
-                        muscle: '',
+                        name: exercise.exercise_name ?? '--',
+                        muscle: muscleLabel,
                         sets,
                         exerciseId: (exercise as any).exercise_id ?? null,
                     };
@@ -180,13 +276,13 @@ export function TemplateSessionScreen({
         };
     }, [templateId]);
 
-    // Timer logic
+    // Timer logic (pauses when timerPaused)
     useEffect(() => {
         const timer = setInterval(() => {
-            setElapsedTime(prev => prev + 1);
+            setElapsedTime(prev => (!timerPaused ? prev + 1 : prev));
         }, 1000);
         return () => clearInterval(timer);
-    }, []);
+    }, [timerPaused]);
 
     const formatTime = (seconds: number) => {
         const h = Math.floor(seconds / 3600);
@@ -199,26 +295,16 @@ export function TemplateSessionScreen({
         if (onAddExercise) {
             onAddExercise((exercise) => {
                 const newExercise: Exercise = {
-                    id: Math.random().toString(),
+                    id: generateId(),
                     name: exercise.name,
-                    muscle: exercise.muscles?.[0] || exercise.category?.toUpperCase() || 'UNKNOWN',
+                    muscle: exercise.muscles?.[0] || exercise.exercise_type?.toUpperCase() || exercise.category?.toUpperCase() || '--',
                     sets: [
-                        { id: Math.random().toString(), kg: '', reps: '', completed: false }
-                    ]
+                        { id: generateId(), kg: '', reps: '', completed: false }
+                    ],
+                    exerciseId: exercise.id ?? null,
                 };
                 setExercises(prev => [...prev, newExercise]);
             });
-        } else {
-            const newExercise: Exercise = {
-                id: Date.now().toString(),
-                name: 'Barbell Squat', // Placeholder
-                muscle: 'QUADRICEPS',
-                sets: [
-                    { id: '1', kg: '', reps: '', completed: false },
-                    { id: '2', kg: '', reps: '', completed: false }
-                ]
-            };
-            setExercises([...exercises, newExercise]);
         }
     };
 
@@ -256,6 +342,22 @@ export function TemplateSessionScreen({
             }
             return ex;
         }));
+    };
+
+    const handleRemoveExercise = (exerciseId: string) => {
+        setExercises(prev => prev.filter(e => e.id !== exerciseId));
+        setExerciseMenuExerciseId(null);
+    };
+
+    const handleSetSetTag = (exerciseId: string, setId: string, tag: 'W' | 'F' | 'D') => {
+        setExercises(prev => prev.map(ex => {
+            if (ex.id !== exerciseId) return ex;
+            return {
+                ...ex,
+                sets: ex.sets.map(s => s.id === setId ? { ...s, tag } : s),
+            };
+        }));
+        setSetTagMenuAnchor(null);
     };
 
     const handleFinishWorkout = async () => {
@@ -350,13 +452,6 @@ export function TemplateSessionScreen({
 
             <FloatingBackButton onPress={() => navigation?.goBack()} />
 
-            <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 16 : 60 }]}>
-                <View style={{ width: 40 }} />
-                <Pressable onPress={handleFinishWorkout} disabled={saving}>
-                    <Text style={styles.finishText}>{saving ? 'Saving…' : 'Finish'}</Text>
-                </Pressable>
-            </View>
-
             <ScrollView style={styles.content} contentContainerStyle={{ paddingTop: 20, paddingBottom: 120 }}>
 
                 {loading ? (
@@ -366,21 +461,36 @@ export function TemplateSessionScreen({
                     </View>
                 ) : (
                     <>
-                        <Text style={styles.screenHeading}>{sessionTitle}</Text>
+                        <TextInput
+                            style={styles.screenHeading}
+                            value={sessionTitle}
+                            onChangeText={setSessionTitle}
+                            placeholder="Workout"
+                            placeholderTextColor={colors.textTertiary}
+                            underlineColorAndroid="transparent"
+                        />
 
                         <View style={styles.statsRow}>
                             <View style={styles.statItem}>
-                                <Text style={styles.statLabel}>DURATION</Text>
                                 <Text style={styles.statValue}>{formatTime(elapsedTime)}</Text>
                             </View>
                             <View style={styles.statDivider} />
-                            <View style={styles.statItem}>
-                                <Text style={styles.statLabel}>CALORIES</Text>
-                                <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                                    <Text style={[styles.statValue, { color: colors.bodyOrange }]}>142</Text>
-                                    <Text style={styles.statUnit}> kcal</Text>
-                                </View>
-                            </View>
+                            <Pressable
+                                style={styles.statItem}
+                                onPress={() => setTimerPaused(p => !p)}
+                            >
+                                {timerPaused ? (
+                                    <>
+                                        <MaterialCommunityIcons name="play-circle" size={28} color={colors.bodyOrange} />
+                                        <Text style={styles.stopResumeLabel}>Resume</Text>
+                                    </>
+                                ) : (
+                                    <>
+                                        <MaterialCommunityIcons name="pause-circle" size={28} color={colors.bodyOrange} />
+                                        <Text style={styles.stopResumeLabel}>Stop</Text>
+                                    </>
+                                )}
+                            </Pressable>
                         </View>
 
                         <View style={[styles.sectionHeader, { marginTop: 24 }]}>
@@ -393,24 +503,30 @@ export function TemplateSessionScreen({
                             <Text style={styles.reorderText}>REORDER</Text>
                         </View>
 
-                        {exercises.length === 0 ? (
-                            <View style={styles.emptyExercises}>
-                                <MaterialCommunityIcons name="dumbbell" size={48} color={colors.bgElevated} />
-                                <Text style={styles.emptyText}>No exercises added</Text>
-                            </View>
-                        ) : (
+                        {exercises.length > 0 ? (
                             <View style={styles.exercisesList}>
                                 {exercises.map((exercise, index) => (
                                     <View key={exercise.id} style={styles.activeExerciseCard}>
                                         <View style={styles.exerciseHeader}>
-                                            <View style={styles.iconContainer}>
-                                                <MaterialCommunityIcons name="dumbbell" size={24} color={colors.bodyOrange} />
-                                            </View>
-                                            <View style={{ marginLeft: 12, flex: 1 }}>
-                                                <Text style={styles.exerciseName}>{exercise.name}</Text>
-                                                <Text style={styles.exerciseMuscle}>{exercise.muscle}</Text>
-                                            </View>
-                                            <MaterialCommunityIcons name="chevron-up" size={24} color={colors.textSecondary} />
+                                            <Pressable
+                                                style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
+                                                onPress={() => onPressExercise?.(exercise.exerciseId ?? null, exercise.name)}
+                                            >
+                                                <View style={styles.iconContainer}>
+                                                    <MaterialCommunityIcons name="dumbbell" size={24} color={colors.bodyOrange} />
+                                                </View>
+                                                <View style={{ marginLeft: 12, flex: 1 }}>
+                                                    <Text style={styles.exerciseName}>{exercise.name}</Text>
+                                                    <Text style={styles.exerciseMuscle}>{exercise.muscle}</Text>
+                                                </View>
+                                            </Pressable>
+                                            <Pressable
+                                                ref={(r: any) => { exerciseMenuButtonRefs.current[exercise.id] = r; }}
+                                                style={styles.exerciseMenuButton}
+                                                onPress={() => setExerciseMenuExerciseId(exercise.id)}
+                                            >
+                                                <MaterialCommunityIcons name="dots-vertical" size={24} color={colors.textSecondary} />
+                                            </Pressable>
                                         </View>
 
                                         <View style={styles.setsHeader}>
@@ -423,15 +539,19 @@ export function TemplateSessionScreen({
                                         <View style={styles.setsList}>
                                             {exercise.sets.map((set, setIndex) => (
                                                 <View key={set.id} style={styles.setRow}>
-                                                    <View style={[
-                                                        styles.setNumberBadge,
-                                                        set.completed && styles.setNumberCompleted
-                                                    ]}>
+                                                    <Pressable
+                                                        ref={(r: any) => { setTagButtonRefs.current[`${exercise.id}-${set.id}`] = r; }}
+                                                        style={[
+                                                            styles.setNumberBadge,
+                                                            set.completed && styles.setNumberCompleted
+                                                        ]}
+                                                        onPress={() => setSetTagMenuAnchor({ exerciseId: exercise.id, setId: set.id })}
+                                                    >
                                                         <Text style={[
                                                             styles.setNumberText,
                                                             set.completed && { color: colors.healthGreen }
-                                                        ]}>{setIndex + 1}</Text>
-                                                    </View>
+                                                        ]}>{set.tag ?? getWorkingSetNumber(exercise.sets, setIndex)}</Text>
+                                                    </Pressable>
 
                                                     <View style={[
                                                         styles.inputContainer,
@@ -487,7 +607,7 @@ export function TemplateSessionScreen({
                                     </View>
                                 ))}
                             </View>
-                        )}
+                        ) : null}
 
                         <Pressable style={styles.addExerciseButton} onPress={handleAddExercise}>
                             <View style={styles.addIconCircle}>
@@ -501,6 +621,22 @@ export function TemplateSessionScreen({
             </ScrollView>
 
             <View style={styles.footer}>
+                <Pressable
+                    style={styles.discardButton}
+                    onPress={() => {
+                        Alert.alert(
+                            'Discard workout?',
+                            'Your progress will not be saved.',
+                            [
+                                { text: 'Cancel', style: 'cancel' },
+                                { text: 'Discard', style: 'destructive', onPress: () => navigation?.goBack() },
+                            ]
+                        );
+                    }}
+                >
+                    <MaterialCommunityIcons name="delete-outline" size={22} color={colors.textPrimary} />
+                    <Text style={styles.discardButtonText}>Discard</Text>
+                </Pressable>
                 <Pressable style={styles.endSessionButton} onPress={handleFinishWorkout} disabled={saving}>
                     {saving ? (
                         <ActivityIndicator size="small" color={colors.bgMidnight} />
@@ -512,6 +648,78 @@ export function TemplateSessionScreen({
                     )}
                 </Pressable>
             </View>
+
+            <Modal
+                visible={!!exerciseMenuExerciseId}
+                transparent
+                onRequestClose={() => setExerciseMenuExerciseId(null)}
+            >
+                <Pressable style={styles.modalBackdrop} onPress={() => setExerciseMenuExerciseId(null)}>
+                    <Pressable
+                        style={[
+                            styles.overlayCard,
+                            {
+                                position: 'absolute',
+                                ...(exerciseMenuPosition
+                                    ? {
+                                        left: exerciseMenuPosition.x + exerciseMenuPosition.w - 160,
+                                        top: exerciseMenuPosition.y + exerciseMenuPosition.h + 4,
+                                    }
+                                    : {
+                                        left: Dimensions.get('window').width / 2 - 80,
+                                        top: Dimensions.get('window').height / 2 - 30,
+                                    }),
+                            },
+                        ]}
+                            onPress={(e) => e.stopPropagation?.()}
+                    >
+                        <Pressable
+                            style={styles.overlayDeleteButton}
+                            onPress={() => exerciseMenuExerciseId && handleRemoveExercise(exerciseMenuExerciseId)}
+                        >
+                            <MaterialCommunityIcons name="delete-outline" size={20} color="#DC2626" />
+                            <Text style={styles.overlayDeleteText}>Delete</Text>
+                        </Pressable>
+                    </Pressable>
+                </Pressable>
+            </Modal>
+
+            <Modal
+                visible={!!setTagMenuAnchor}
+                transparent
+                onRequestClose={() => setSetTagMenuAnchor(null)}
+            >
+                <Pressable style={styles.modalBackdrop} onPress={() => setSetTagMenuAnchor(null)}>
+                    <Pressable
+                        style={[
+                            styles.overlayCard,
+                            {
+                                position: 'absolute',
+                                ...(setTagMenuPosition
+                                    ? {
+                                        left: setTagMenuPosition.x,
+                                        top: setTagMenuPosition.y + setTagMenuPosition.h + 4,
+                                    }
+                                    : {
+                                        left: Dimensions.get('window').width / 2 - 80,
+                                        top: Dimensions.get('window').height / 2 - 30,
+                                    }),
+                            },
+                        ]}
+                        onPress={(e) => e.stopPropagation?.()}
+                    >
+                        {setTagMenuAnchor && (['W', 'F', 'D'] as const).map((tag) => (
+                            <Pressable
+                                key={tag}
+                                style={styles.setTagOption}
+                                onPress={() => handleSetSetTag(setTagMenuAnchor.exerciseId, setTagMenuAnchor.setId, tag)}
+                            >
+                                <Text style={styles.setTagOptionText}>{tag}</Text>
+                            </Pressable>
+                        ))}
+                    </Pressable>
+                </Pressable>
+            </Modal>
         </View>
     );
 }
@@ -521,21 +729,6 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: colors.bgMidnight,
     },
-    header: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        paddingHorizontal: space.md,
-        zIndex: 10,
-    },
-    finishText: {
-        color: colors.bodyOrange,
-        fontWeight: 'bold',
-        fontSize: 16,
-    },
     content: {
         flex: 1,
         paddingHorizontal: 20,
@@ -544,8 +737,10 @@ const styles = StyleSheet.create({
         fontSize: 28,
         fontWeight: '700',
         color: colors.textPrimary,
-        marginTop: 40,
+        marginTop: 80,
         marginBottom: 24,
+        paddingVertical: 0,
+        paddingHorizontal: 0,
     },
     statsRow: {
         flexDirection: 'row',
@@ -561,6 +756,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 4,
     },
+    stopResumeLabel: {
+        ...typography.sm,
+        fontWeight: '700',
+        color: colors.bodyOrange,
+    },
     statLabel: {
         ...typography.xs,
         color: colors.textTertiary,
@@ -572,11 +772,6 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: colors.textPrimary,
         fontVariant: ['tabular-nums'],
-    },
-    statUnit: {
-        ...typography.sm,
-        color: colors.textTertiary,
-        fontWeight: '600',
     },
     statDivider: {
         width: 1,
@@ -621,7 +816,7 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     activeExerciseCard: {
-        backgroundColor: colors.bgCharcoal,
+        backgroundColor: '#2C2C2C',
         borderRadius: radius.xl,
         padding: 16,
         borderWidth: 1,
@@ -633,6 +828,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 24,
+    },
+    exerciseMenuButton: {
+        padding: space.xs,
     },
     iconContainer: {
         width: 48,
@@ -754,22 +952,6 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: '600',
     },
-    emptyExercises: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 40,
-        backgroundColor: colors.bgCharcoal,
-        borderRadius: radius.lg,
-        borderStyle: 'dashed',
-        borderWidth: 1,
-        borderColor: colors.borderSubtle,
-        marginBottom: 20,
-    },
-    emptyText: {
-        color: colors.textTertiary,
-        marginTop: 12,
-        fontSize: 14,
-    },
     loadingWrap: {
         paddingVertical: 48,
         alignItems: 'center',
@@ -784,11 +966,30 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
         padding: 20,
         paddingBottom: 40,
         backgroundColor: colors.bgMidnight,
     },
+    discardButton: {
+        height: 56,
+        borderRadius: 16,
+        backgroundColor: '#DC2626',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        minWidth: 120,
+    },
+    discardButtonText: {
+        ...typography.base,
+        fontWeight: '700',
+        color: colors.textPrimary,
+    },
     endSessionButton: {
+        flex: 1,
         height: 56,
         borderRadius: 16,
         backgroundColor: colors.bodyOrange,
@@ -802,5 +1003,40 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         fontSize: 16,
         textTransform: 'uppercase',
+    },
+    modalBackdrop: {
+        flex: 1,
+        backgroundColor: 'transparent',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    overlayCard: {
+        backgroundColor: colors.bgCharcoal,
+        borderRadius: radius.lg,
+        padding: space.sm,
+        minWidth: 160,
+        borderWidth: 1,
+        borderColor: colors.borderSubtle,
+    },
+    overlayDeleteButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingVertical: space.sm,
+        paddingHorizontal: space.md,
+    },
+    overlayDeleteText: {
+        ...typography.base,
+        fontWeight: '600',
+        color: '#DC2626',
+    },
+    setTagOption: {
+        paddingVertical: space.sm,
+        paddingHorizontal: space.md,
+    },
+    setTagOptionText: {
+        ...typography.base,
+        fontWeight: '600',
+        color: colors.textPrimary,
     },
 });

@@ -79,7 +79,7 @@ export function useTodayWorkoutForIntensity() {
       }
 
       const exercises: Exercise[] = sessionExercises.map((row) => ({
-        name: row.exercise_name ?? '',
+        name: row.exercise_name ?? '--',
         sets: setsByExerciseId[row.id] ?? [],
       }));
 

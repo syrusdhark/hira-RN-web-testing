@@ -1,10 +1,5 @@
 -- WARNING: This schema is for context only and is not meant to be run.
 -- Table order and constraints may not be valid for execution.
---
--- Row Level Security (RLS): When enabled, RLS policies for workout-related and other
--- user-scoped tables are applied via migrations in supabase/migrations/ (e.g. policies
--- on workout_programs, workout_sessions, workout_templates). This file documents table
--- structure only; actual RLS is defined in migrations.
 
 CREATE TABLE public.achievement_series (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -414,7 +409,6 @@ CREATE TABLE public.exercise_muscles (
 CREATE TABLE public.exercises (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   name text NOT NULL UNIQUE,
-  category text CHECK (category = ANY (ARRAY['strength'::text, 'cardio'::text, 'mobility'::text])),
   primary_body_part text,
   equipment text,
   is_custom boolean DEFAULT false,
@@ -428,6 +422,7 @@ CREATE TABLE public.exercises (
   thumbnail_url text,
   difficulty_level text CHECK (difficulty_level = ANY (ARRAY['beginner'::text, 'intermediate'::text, 'advanced'::text])),
   source text DEFAULT 'official'::text,
+  exercise_type text CHECK (exercise_type = ANY (ARRAY['strength'::text, 'cardio'::text, 'bodybuilding'::text, 'calisthenics'::text, 'mobility'::text])),
   CONSTRAINT exercises_pkey PRIMARY KEY (id),
   CONSTRAINT exercises_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id)
 );
@@ -999,6 +994,8 @@ CREATE TABLE public.workout_templates (
   updated_at timestamp with time zone DEFAULT now(),
   deleted_at timestamp with time zone,
   is_system_template boolean NOT NULL DEFAULT false,
+  activity_type text CHECK (activity_type IS NULL OR (activity_type = ANY (ARRAY['bodybuilding'::text, 'strength'::text, 'yoga'::text, 'stretch'::text, 'rest'::text, 'calisthenics'::text, 'hybrid'::text, 'running'::text]))),
+  activity_type_tags ARRAY,
   CONSTRAINT workout_templates_pkey PRIMARY KEY (id),
   CONSTRAINT workout_templates_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );

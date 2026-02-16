@@ -19,8 +19,10 @@ import { useProfile } from '../context/ProfileContext';
 import { useUserXp } from '../hooks/useUserXp';
 import { useUserStreaks } from '../hooks/useUserStreaks';
 import { useUserAchievements } from '../hooks/useUserAchievements';
+import { FloatingBackButton } from '../components/FloatingBackButton';
 
 type ProfileScreenProps = {
+  navigation?: { goBack: () => void };
   onViewAllAchievements?: () => void;
   onPersonalInfo?: () => void;
   onPreferences?: () => void;
@@ -40,6 +42,7 @@ function achievementIconName(icon: string | null): keyof typeof MaterialCommunit
 }
 
 export function ProfileScreen({
+  navigation,
   onViewAllAchievements,
   onPersonalInfo,
   onPreferences,
@@ -78,6 +81,7 @@ export function ProfileScreen({
 
   return (
     <View style={styles.root}>
+      {navigation ? <FloatingBackButton onPress={navigation.goBack} /> : null}
       <LinearGradient
         colors={['#2D2640', '#1A1725', colors.bgMidnight]}
         style={[styles.gradient, { paddingTop }]}

@@ -27,40 +27,7 @@ type AiChatScreenProps = {
   onNavigateToNutrition?: () => void;
 };
 
-const QUICK_ACTIONS = [
-  {
-    id: 'workout',
-    label: 'Log my workout',
-    icon: 'swap-horizontal' as const,
-    iconColor: colors.primaryIndigo,
-    gradientColors: [colors.primaryIndigo + '35', colors.primaryIndigo + '08'] as const,
-    onPress: (nav: AiChatScreenProps) => nav.onNavigateToWorkout?.(),
-  },
-  {
-    id: 'sleep',
-    label: 'Give me a sleep tip',
-    icon: 'weather-night' as const,
-    iconColor: colors.brandBlue,
-    gradientColors: [colors.brandBlue + '35', colors.brandBlue + '08'] as const,
-    onPress: (nav: AiChatScreenProps) => nav.onNavigateToSleep?.(),
-  },
-  {
-    id: 'macros',
-    label: 'How are my macros?',
-    icon: 'food-apple-outline' as const,
-    iconColor: colors.bodyOrange,
-    gradientColors: [colors.bodyOrange + '35', colors.bodyOrange + '08'] as const,
-    onPress: (nav: AiChatScreenProps) => nav.onNavigateToNutrition?.(),
-  },
-  {
-    id: 'meditation',
-    label: 'Start a meditation',
-    icon: 'meditation' as const,
-    iconColor: accentPink,
-    gradientColors: [accentPink + '35', accentPink + '08'] as const,
-    sendMessage: 'Start a meditation',
-  },
-] as const;
+const QUICK_ACTIONS = [] as const;
 
 export function AiChatScreen({
   onNavigateToWorkout,
@@ -175,7 +142,7 @@ export function AiChatScreen({
                 <Text style={styles.heroPrompt}>How can I help you today?</Text>
               </View>
 
-              {conversationReady && (
+              {conversationReady && QUICK_ACTIONS.length > 0 && (
                 <View style={styles.quickActions}>
                   {QUICK_ACTIONS.map((action) => (
                     <Pressable

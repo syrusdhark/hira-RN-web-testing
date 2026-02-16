@@ -64,8 +64,10 @@ export function TemplateCreateScreen({ navigation, onStartSession, onAddExercise
             const loadedExercises: Exercise[] = (templateData.workout_template_exercises || []).map((ex: any) => ({
                 id: ex.id,
                 originalId: ex.exercise_id || ex.id,
-                name: ex.exercise_name,
-                muscle: 'GENERAL', // We don't store this, could fetch from exercises table
+                name: ex.exercise_name ?? '--',
+                muscle: ex.exercises?.exercise_type
+                    ? ex.exercises.exercise_type.charAt(0).toUpperCase() + ex.exercises.exercise_type.slice(1)
+                    : '--',
                 sets: (ex.workout_template_sets || []).map((set: any) => ({
                     id: set.id,
                     kg: '', // We don't store weight in template
@@ -120,26 +122,13 @@ export function TemplateCreateScreen({ navigation, onStartSession, onAddExercise
                     id: Math.random().toString(),
                     originalId: exercise.id,
                     name: exercise.name,
-                    muscle: exercise.muscles?.[0] || exercise.category?.toUpperCase() || 'UNKNOWN',
+                    muscle: exercise.muscles?.[0] || exercise.exercise_type?.toUpperCase() || exercise.category?.toUpperCase() || '--',
                     sets: [
                         { id: Math.random().toString(), kg: '', reps: '' }
                     ]
                 };
                 setExercises(prev => [...prev, newExercise]);
             });
-        } else {
-            // Mock adding an exercise
-            const newExercise: Exercise = {
-                id: Date.now().toString(),
-                originalId: 'mock-id',
-                name: 'Barbell Squat',
-                muscle: 'QUADRICEPS',
-                sets: [
-                    { id: '1', kg: '', reps: '' },
-                    { id: '2', kg: '', reps: '' }
-                ]
-            };
-            setExercises([...exercises, newExercise]);
         }
     };
 
@@ -427,13 +416,6 @@ export function TemplateCreateScreen({ navigation, onStartSession, onAddExercise
                             <MaterialCommunityIcons name="delete-outline" size={24} color={colors.textSecondary} />
                         </Pressable>
                     )}
-                    <Pressable
-                        style={[styles.startSessionButton, { flex: 1 }]}
-                        onPress={() => onStartSession?.()}
-                    >
-                        <MaterialCommunityIcons name="play" size={24} color={colors.textPrimary} />
-                        <Text style={styles.startSessionText}>Start Session</Text>
-                    </Pressable>
                 </View>
             </View>
         </View>

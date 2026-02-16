@@ -3,6 +3,40 @@ import { supabase } from '../lib/supabase';
 
 export const WORKOUT_TEMPLATES_KEY = ['workoutTemplates'];
 
+const ACTIVITY_TYPE_VALUES = ['bodybuilding', 'strength', 'yoga', 'stretch', 'rest', 'calisthenics', 'hybrid', 'running'] as const;
+
+async function deriveActivityTypeAndTags(templateId: string): Promise<{ activity_type: string | null; activity_type_tags: string[] | null }> {
+    const { data: rows, error } = await supabase
+        .from('workout_template_exercises')
+        .select('exercises(exercise_type)')
+        .eq('workout_template_id', templateId);
+
+    if (error || !rows?.length) {
+        return { activity_type: null, activity_type_tags: null };
+    }
+
+    const types: string[] = [];
+    for (const row of rows as any[]) {
+        const t = row?.exercises?.exercise_type;
+        if (t && typeof t === 'string' && ACTIVITY_TYPE_VALUES.includes(t as any)) {
+            types.push(t);
+        }
+    }
+
+    if (types.length === 0) return { activity_type: null, activity_type_tags: null };
+
+    const counts: Record<string, number> = {};
+    for (const t of types) {
+        counts[t] = (counts[t] || 0) + 1;
+    }
+    const distinct = Object.keys(counts);
+
+    if (distinct.length === 1) {
+        return { activity_type: distinct[0], activity_type_tags: null };
+    }
+    return { activity_type: 'hybrid', activity_type_tags: distinct };
+}
+
 export function useWorkoutTemplates() {
     return useQuery({
         queryKey: WORKOUT_TEMPLATES_KEY,
@@ -30,6 +64,7 @@ export function useWorkoutTemplates() {
 export function useWorkoutTemplate(templateId: string | null) {
     return useQuery({
         queryKey: [...WORKOUT_TEMPLATES_KEY, templateId],
+        refetchOnMount: 'always',
         queryFn: async () => {
             if (!templateId) return null;
 
@@ -42,6 +77,7 @@ export function useWorkoutTemplate(templateId: string | null) {
                         exercise_id,
                         exercise_name,
                         order_index,
+                        exercises(exercise_type),
                         workout_template_sets (
                             id,
                             set_number,
@@ -61,6 +97,25 @@ export function useWorkoutTemplate(templateId: string | null) {
             if (!data) {
                 console.warn('Template not found for ID:', templateId);
                 return null;
+            }
+
+            // Fallback: if join didn't return exercise_type (e.g. RLS), fetch by exercise_id
+            const rows = (data as any).workout_template_exercises || [];
+            const missingIds = rows
+                .filter((r: any) => r.exercise_id && !r.exercises?.exercise_type)
+                .map((r: any) => r.exercise_id);
+            if (missingIds.length > 0) {
+                const { data: exRows } = await supabase
+                    .from('exercises')
+                    .select('id, exercise_type')
+                    .in('id', missingIds);
+                const typeById = new Map((exRows || []).map((r: any) => [r.id, r.exercise_type]));
+                for (const r of rows) {
+                    if (r.exercise_id && !r.exercises?.exercise_type) {
+                        const t = typeById.get(r.exercise_id);
+                        if (t) r.exercises = { ...(r.exercises || {}), exercise_type: t };
+                    }
+                }
             }
 
             console.log('Fetched template details:', data);
@@ -118,7 +173,14 @@ export function useCreateWorkoutTemplate() {
                 throw new Error(`Template creation failed: ${error.message}`);
             }
 
-            return { id: templateId, title, description, exercises, user_id: user.id };
+            const id = templateId as string;
+            const { activity_type, activity_type_tags } = await deriveActivityTypeAndTags(id);
+            await supabase
+                .from('workout_templates')
+                .update({ activity_type, activity_type_tags })
+                .eq('id', id);
+
+            return { id, title, description, exercises, user_id: user.id };
         },
 
         // OPTIMISTIC UPDATE - runs before mutation
@@ -226,6 +288,12 @@ export function useUpdateWorkoutTemplate() {
                 }
                 throw new Error(`Template update failed: ${error.message}`);
             }
+
+            const { activity_type, activity_type_tags } = await deriveActivityTypeAndTags(templateId);
+            await supabase
+                .from('workout_templates')
+                .update({ activity_type, activity_type_tags })
+                .eq('id', templateId);
 
             return { templateId, title, description, exercises };
         },

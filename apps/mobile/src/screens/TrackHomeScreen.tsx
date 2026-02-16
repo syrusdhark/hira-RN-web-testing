@@ -6,9 +6,9 @@ import { EnvironmentContainer } from '../components/EnvironmentContainer';
 import { colors } from '../theme';
 import { ShopHomeScreen } from './ShopHomeScreen';
 import { AiChatScreen } from './AiChatScreen';
-import { ProfileScreen } from './ProfileScreen';
 import { CommunityScreen } from './CommunityScreen';
 import { WorkoutTrackerScreen } from './WorkoutTrackerScreen';
+import { WorkoutInsightsScreen } from './WorkoutInsightsScreen';
 import type { StartProgramDayPayload } from './ProgramScreen';
 
 const TRACK_TABS: TabConfig[] = [
@@ -16,7 +16,7 @@ const TRACK_TABS: TabConfig[] = [
   { key: 'track', label: 'Today', icon: 'lightning-bolt', activeColor: colors.textPrimary },
   { key: 'chat', label: 'Hira', icon: 'chat-processing-outline', iconImage: require('../../assets/hira-icon.png'), activeColor: colors.textPrimary },
   { key: 'community', label: 'Connect', icon: 'account-group-outline', activeColor: colors.textPrimary },
-  { key: 'profile', label: 'Profile', icon: 'account-circle-outline', activeColor: colors.textPrimary },
+  { key: 'progress', label: 'Progress', icon: 'chart-line', activeColor: colors.textPrimary },
 ];
 
 export function TrackHomeScreen({
@@ -29,14 +29,22 @@ export function TrackHomeScreen({
   onNavigateToHabits,
   onNavigateToCart,
   onNavigateToPersonalInfo,
+  onNavigateToPreferences,
+  onNavigateToIntegrations,
+  onNavigateToHelpSupport,
   onNavigateToAchievements,
   onNavigateToCreatePost,
   onSignOut,
   onNavigateToProgram,
   onNavigateToTemplateCreate,
   onNavigateToMyWorkouts,
+  onNavigateToActivityType,
+  onStartTemplate,
   onEditTemplate,
   onNavigateToWorkoutInsights,
+  onOpenExerciseDetail,
+  onNavigateToExercises,
+  onNavigateToProfile,
 }: {
   activeTab?: string;
   onTabChange?: (key: string) => void;
@@ -47,14 +55,22 @@ export function TrackHomeScreen({
   onNavigateToHabits?: () => void;
   onNavigateToCart?: () => void;
   onNavigateToPersonalInfo?: () => void;
+  onNavigateToPreferences?: () => void;
+  onNavigateToIntegrations?: () => void;
+  onNavigateToHelpSupport?: () => void;
   onNavigateToAchievements?: () => void;
   onNavigateToCreatePost?: () => void;
   onSignOut?: () => void;
   onNavigateToProgram?: () => void;
   onNavigateToTemplateCreate?: () => void;
   onNavigateToMyWorkouts?: () => void;
+  onNavigateToActivityType?: (activityType: string) => void;
+  onStartTemplate?: (templateId: string) => void;
   onEditTemplate?: (templateId: string) => void;
   onNavigateToWorkoutInsights?: () => void;
+  onOpenExerciseDetail?: (exerciseId: string, exerciseName: string) => void;
+  onNavigateToExercises?: () => void;
+  onNavigateToProfile?: () => void;
 }) {
   const activeTab = activeTabProp;
 
@@ -74,8 +90,13 @@ export function TrackHomeScreen({
             onNavigateToProgram={onNavigateToProgram}
             onNavigateToTemplateCreate={onNavigateToTemplateCreate}
             onNavigateToMyWorkouts={onNavigateToMyWorkouts}
+            onNavigateToActivityType={onNavigateToActivityType}
+            onStartTemplate={onStartTemplate}
             onEditTemplate={onEditTemplate}
             onNavigateToWorkoutInsights={onNavigateToWorkoutInsights}
+            onOpenExerciseDetail={onOpenExerciseDetail}
+            onNavigateToExercises={onNavigateToExercises}
+            onNavigateToProfile={onNavigateToProfile}
             showBackButton={false}
           />
         );
@@ -87,8 +108,8 @@ export function TrackHomeScreen({
             onNavigateToNutrition={onNavigateToNutrition}
           />
         );
-      case 'profile':
-        return <ProfileScreen onPersonalInfo={onNavigateToPersonalInfo} onViewAllAchievements={onNavigateToAchievements} onSignOut={onSignOut} />;
+      case 'progress':
+        return <WorkoutInsightsScreen navigation={{ goBack: () => {} }} />;
       case 'community':
         return <CommunityScreen onNavigateToCreatePost={onNavigateToCreatePost} />;
     }
@@ -96,7 +117,7 @@ export function TrackHomeScreen({
 
   return (
     <EnvironmentContainer
-      noPadding={activeTab === 'shop' || activeTab === 'track' || activeTab === 'profile' || activeTab === 'community'}
+      noPadding={activeTab === 'shop' || activeTab === 'track' || activeTab === 'progress' || activeTab === 'community'}
       disableScroll={activeTab === 'shop' || activeTab === 'track' || activeTab === 'chat' || activeTab === 'community'}
       footer={<BottomTabBar tabs={TRACK_TABS} activeTab={activeTab} onTabPress={handleTabPress} />}
     >

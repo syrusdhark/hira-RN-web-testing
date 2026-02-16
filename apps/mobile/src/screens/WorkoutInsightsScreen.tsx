@@ -41,14 +41,6 @@ function formatMuscleName(muscle: string): string {
     .replace(/\b\w/g, (l) => l.toUpperCase());
 }
 
-function formatDuration(min: number): string {
-  if (min <= 0) return '0 min';
-  if (min < 60) return `${min} min`;
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return m > 0 ? `${h}h ${m} min` : `${h}h`;
-}
-
 function categoryColor(category: MuscleScore['category']): string {
   switch (category) {
     case 'high':
@@ -74,7 +66,6 @@ export function WorkoutInsightsScreen({
   const { data: mappings = [], isLoading: mappingsLoading, isError: mappingsError } = useExerciseMuscleMappings();
   const { data: workoutData, isLoading: workoutLoading } = useTodayWorkoutForIntensity();
   const exercises = workoutData?.exercises ?? [];
-  const totalDurationMinutes = workoutData?.totalDurationMinutes ?? 0;
 
   const userProfile: UserProfile = useMemo(
     () => ({
@@ -193,10 +184,6 @@ export function WorkoutInsightsScreen({
               <View style={styles.metaItem}>
                 <Text style={styles.metaValue}>{meta.totalVolume}</Text>
                 <Text style={styles.metaLabel}>Total volume (kg)</Text>
-              </View>
-              <View style={styles.metaItem}>
-                <Text style={styles.metaValue}>{formatDuration(totalDurationMinutes)}</Text>
-                <Text style={styles.metaLabel}>Time</Text>
               </View>
               <View style={styles.metaItem}>
                 <Text style={styles.metaValue}>{exercises.length}</Text>

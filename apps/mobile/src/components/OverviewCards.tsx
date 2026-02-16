@@ -248,10 +248,6 @@ export function NextWorkoutCard({
   const accent = colors.bodyOrange;
   const displayName =
     workoutName && workoutName.trim().length > 0 ? workoutName : 'Workout';
-  const durationText =
-    durationMinutes != null && durationMinutes > 0
-      ? `${durationMinutes}m • High Intensity`
-      : '— • High Intensity';
 
   const isRest = !!isRestDay;
   const mainTitle = isRest
@@ -261,7 +257,7 @@ export function NextWorkoutCard({
     : displayName;
   const subtitleText = isRest
     ? 'Today is a scheduled rest day'
-    : durationText;
+    : 'High Intensity';
   const ctaLabel = isRest ? 'Recover' : 'Start';
 
   const backgroundSource = isRest
@@ -291,20 +287,16 @@ export function NextWorkoutCard({
         style={styles.workoutCardBgGradient}
       />
       {title ? (
-        <Text style={[styles.workoutCardTitle, { marginBottom: space.md }]}>{title}</Text>
+        <Text style={[styles.workoutCardTitle, { marginBottom: space.xs }]}>{title}</Text>
       ) : null}
+      <Text style={styles.moveCardProgramName} numberOfLines={2}>
+        {mainTitle}
+      </Text>
+      {(!hideSubtitle || !hideCta) ? (
       <View style={styles.moveCardContentRow}>
         <View style={styles.moveCardLeftColumn}>
-          <Text style={styles.moveCardMainTitle} numberOfLines={2}>
-            {mainTitle}
-          </Text>
           {!hideSubtitle ? (
             <View style={styles.moveCardSubtitleRow}>
-              <MaterialCommunityIcons
-                name="clock-outline"
-                size={14}
-                color={colors.textSecondary}
-              />
               <Text style={styles.moveCardSubtitleText}>{subtitleText}</Text>
             </View>
           ) : null}
@@ -342,6 +334,7 @@ export function NextWorkoutCard({
           </View>
         ) : null}
       </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -492,6 +485,13 @@ const styles = StyleSheet.create({
     color: colors.bodyOrange,
     textTransform: 'uppercase',
     letterSpacing: 1.2,
+  },
+  moveCardProgramName: {
+    ...typography['2xl'],
+    fontWeight: '700',
+    color: colors.textPrimary,
+    alignSelf: 'flex-start',
+    marginBottom: space.sm,
   },
   moveCardContentRow: {
     flexDirection: 'row',
