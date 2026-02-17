@@ -8,12 +8,13 @@ import {
   ScrollView,
   Pressable,
   Modal,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, radius, space, typography } from '../theme';
 import { FloatingBackButton } from '../components/FloatingBackButton';
-import { useProgramSchedule, useAssignTemplateToProgramDay } from '../hooks/useProgramSchedule';
+import { useProgramSchedule, useAssignTemplateToProgramDay, useProgramsList, useSetActiveProgram, useDeleteProgram } from '../hooks/useProgramSchedule';
 import { useWorkoutTemplates, useWorkoutTemplate } from '../hooks/useWorkoutTemplates';
 
 const CARD_WIDTH = 100;
@@ -39,6 +40,9 @@ export function ProgramScreen({ navigation, onStartProgramDay, onViewProgramDay,
   const { data, isLoading } = useProgramSchedule();
   const { data: templates = [] } = useWorkoutTemplates();
   const assignTemplate = useAssignTemplateToProgramDay();
+  const { data: programsList = [] } = useProgramsList();
+  const setActiveProgram = useSetActiveProgram();
+  const deleteProgram = useDeleteProgram();
 
   const program = data?.program ?? null;
   const weeks = data?.weeks ?? [];
@@ -59,6 +63,7 @@ export function ProgramScreen({ navigation, onStartProgramDay, onViewProgramDay,
     is_rest_day: boolean;
   } | null>(null);
   const [expandedDayId, setExpandedDayId] = React.useState<string | null>(null);
+  const [myProgramsModalVisible, setMyProgramsModalVisible] = React.useState(false);
 
   React.useEffect(() => {
     if (todayWeekNumber && weeks.includes(todayWeekNumber)) {
@@ -285,7 +290,13 @@ export function ProgramScreen({ navigation, onStartProgramDay, onViewProgramDay,
       <FloatingBackButton onPress={() => navigation?.goBack()} />
 
       <View style={[styles.header, { paddingTop }]}>
-        <Text style={styles.programTitle}>Program</Text>
+        <Pressable
+          style={({ pressed }) => [styles.programTitleButton, pressed && { opacity: 0.8 }]}
+          onPress={() => setMyProgramsModalVisible(true)}
+        >
+          <Text style={styles.programTitle}>{program?.title ?? 'Program'}</Text>
+          <MaterialCommunityIcons name="chevron-down" size={24} color={colors.textPrimary} />
+        </Pressable>
       </View>
 
       {!program && !isLoading ? (
@@ -371,6 +382,89 @@ export function ProgramScreen({ navigation, onStartProgramDay, onViewProgramDay,
           </Pressable>
         </Pressable>
       </Modal>
+
+      <Modal
+        visible={myProgramsModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMyProgramsModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setMyProgramsModalVisible(false)}
+        >
+          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>My Programs</Text>
+            <ScrollView style={styles.modalList} keyboardShouldPersistTaps="handled">
+              {programsList.length === 0 ? (
+                <Text style={styles.modalEmpty}>No programs yet.</Text>
+              ) : (
+                programsList.map((p) => (
+                  <View key={p.id} style={styles.myProgramRow}>
+                    <Pressable
+                      style={({ pressed }) => [styles.modalItem, { flex: 1 }, pressed && { opacity: 0.8 }]}
+                      onPress={() => {
+                        setActiveProgram.mutate(p.id, {
+                          onSuccess: () => setMyProgramsModalVisible(false),
+                        });
+                      }}
+                      disabled={setActiveProgram.isPending}
+                    >
+                      <Text style={styles.modalItemTitle} numberOfLines={1}>{p.title}</Text>
+                      <View style={styles.myProgramRowMeta}>
+                        {p.duration_weeks != null ? (
+                          <Text style={styles.modalItemMeta}>{p.duration_weeks} weeks</Text>
+                        ) : null}
+                        {p.is_active ? (
+                          <Text style={styles.myProgramActiveBadge}>Active</Text>
+                        ) : null}
+                      </View>
+                    </Pressable>
+                    <Pressable
+                      style={({ pressed }) => [styles.myProgramDeleteBtn, pressed && { opacity: 0.8 }]}
+                      onPress={() => {
+                        Alert.alert(
+                          'Delete program?',
+                          `Delete "${p.title}"? This cannot be undone.`,
+                          [
+                            { text: 'Cancel', style: 'cancel' },
+                            {
+                              text: 'Delete',
+                              style: 'destructive',
+                              onPress: () => deleteProgram.mutate(p.id),
+                            },
+                          ]
+                        );
+                      }}
+                      disabled={deleteProgram.isPending}
+                    >
+                      <MaterialCommunityIcons name="delete-outline" size={22} color={colors.textTertiary} />
+                    </Pressable>
+                  </View>
+                ))
+              )}
+            </ScrollView>
+            {onCreateProgram ? (
+              <Pressable
+                style={({ pressed }) => [styles.myProgramCreateButton, pressed && { opacity: 0.8 }]}
+                onPress={() => {
+                  setMyProgramsModalVisible(false);
+                  onCreateProgram();
+                }}
+              >
+                <MaterialCommunityIcons name="plus" size={20} color={colors.textPrimary} />
+                <Text style={styles.myProgramCreateButtonText}>Create program</Text>
+              </Pressable>
+            ) : null}
+            <Pressable
+              style={styles.modalCloseButton}
+              onPress={() => setMyProgramsModalVisible(false)}
+            >
+              <Text style={styles.modalCloseText}>Close</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -386,6 +480,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgMidnight,
     zIndex: 1,
     alignItems: 'center',
+  },
+  programTitleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs,
   },
   programTitle: {
     ...typography['2xl'],
@@ -704,5 +803,43 @@ const styles = StyleSheet.create({
   modalCloseText: {
     ...typography.base,
     color: colors.textSecondary,
+  },
+  myProgramRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: space.sm,
+    gap: space.sm,
+  },
+  myProgramRowMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    marginTop: 2,
+  },
+  myProgramActiveBadge: {
+    ...typography.xs,
+    color: colors.bodyOrange,
+    fontWeight: '600',
+  },
+  myProgramDeleteBtn: {
+    padding: space.sm,
+  },
+  myProgramCreateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.sm,
+    paddingVertical: space.md,
+    paddingHorizontal: space.lg,
+    backgroundColor: colors.bgCharcoal,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    marginTop: space.md,
+  },
+  myProgramCreateButtonText: {
+    ...typography.base,
+    color: colors.textPrimary,
+    fontWeight: '600',
   },
 });

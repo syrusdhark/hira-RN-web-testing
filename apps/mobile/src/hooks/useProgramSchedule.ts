@@ -3,6 +3,16 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 
 export const PROGRAM_SCHEDULE_KEY = ['programSchedule'];
+export const PROGRAMS_LIST_KEY = ['programsList'];
+
+export type ProgramListItem = {
+  id: string;
+  title: string;
+  duration_weeks: number | null;
+  is_active: boolean;
+  started_at: string | null;
+  created_at: string;
+};
 
 export type ProgramDaySchedule = {
   id: string;
@@ -169,6 +179,87 @@ export function useProgramSchedule() {
   });
 }
 
+export function useProgramsList() {
+  return useQuery({
+    queryKey: PROGRAMS_LIST_KEY,
+    queryFn: async (): Promise<ProgramListItem[]> => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data: rows, error } = await supabase
+        .from('workout_programs')
+        .select('id, title, duration_weeks, is_active, started_at, created_at')
+        .eq('user_id', user.id)
+        .is('deleted_at', null)
+        .order('is_active', { ascending: false })
+        .order('started_at', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false });
+
+      if (error || !rows?.length) return [];
+      return rows.map((r: any) => ({
+        id: r.id,
+        title: r.title ?? 'Program',
+        duration_weeks: r.duration_weeks ?? null,
+        is_active: r.is_active ?? false,
+        started_at: r.started_at ?? null,
+        created_at: r.created_at ?? '',
+      }));
+    },
+  });
+}
+
+export function useSetActiveProgram() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (programId: string): Promise<void> => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user authenticated');
+      const now = new Date().toISOString();
+
+      const { error: deactivateError } = await supabase
+        .from('workout_programs')
+        .update({ is_active: false, updated_at: now })
+        .eq('user_id', user.id)
+        .neq('id', programId);
+
+      if (deactivateError) throw new Error(deactivateError.message ?? 'Failed to deactivate other programs');
+
+      const { error: activateError } = await supabase
+        .from('workout_programs')
+        .update({ is_active: true, updated_at: now })
+        .eq('id', programId)
+        .eq('user_id', user.id);
+
+      if (activateError) throw new Error(activateError.message ?? 'Failed to set active program');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: PROGRAM_SCHEDULE_KEY });
+      queryClient.invalidateQueries({ queryKey: PROGRAMS_LIST_KEY });
+    },
+  });
+}
+
+export function useDeleteProgram() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (programId: string): Promise<void> => {
+      const now = new Date().toISOString();
+      const { error } = await supabase
+        .from('workout_programs')
+        .update({ deleted_at: now, updated_at: now })
+        .eq('id', programId);
+
+      if (error) throw new Error(error.message ?? 'Failed to delete program');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: PROGRAM_SCHEDULE_KEY });
+      queryClient.invalidateQueries({ queryKey: PROGRAMS_LIST_KEY });
+    },
+  });
+}
+
 export type CreateProgramInput = {
   title: string;
   description?: string | null;
@@ -177,6 +268,8 @@ export type CreateProgramInput = {
   intention?: 'feel_stronger' | 'build_energy' | 'consistency' | 'stress_reduction' | 'recovery' | null;
   fitness_level?: 'beginner' | 'intermediate' | 'advanced' | null;
   restOnSunday?: boolean;
+  /** day_number 1-7 -> workout_template_id; applied to every week's matching day */
+  day_assignments?: Record<number, string> | null;
 };
 
 export function useCreateProgram() {
@@ -237,19 +330,45 @@ export function useCreateProgram() {
         }
       }
 
-      const { error: daysError } = await supabase
+      const { data: insertedDays, error: daysError } = await supabase
         .from('workout_program_days')
-        .insert(dayRows);
+        .insert(dayRows)
+        .select('id, week_number, day_number');
 
       if (daysError) {
         console.error('Create program days error:', daysError);
         throw new Error(daysError.message ?? 'Failed to create program days');
       }
 
+      const dayAssignments = input.day_assignments ?? null;
+      if (dayAssignments && typeof dayAssignments === 'object' && insertedDays?.length) {
+        const templateRows: Array<{ workout_program_day_id: string; workout_template_id: string; order_index: number }> = [];
+        for (const day of insertedDays as { id: string; week_number: number; day_number: number }[]) {
+          const templateId = dayAssignments[day.day_number];
+          if (templateId) {
+            templateRows.push({
+              workout_program_day_id: day.id,
+              workout_template_id: templateId,
+              order_index: 0,
+            });
+          }
+        }
+        if (templateRows.length > 0) {
+          const { error: templatesError } = await supabase
+            .from('workout_program_day_templates')
+            .insert(templateRows);
+          if (templatesError) {
+            console.error('Create program day templates error:', templatesError);
+            throw new Error(templatesError.message ?? 'Failed to assign workouts to days');
+          }
+        }
+      }
+
       return { programId };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: PROGRAM_SCHEDULE_KEY });
+      queryClient.invalidateQueries({ queryKey: PROGRAMS_LIST_KEY });
     },
   });
 }
