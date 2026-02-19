@@ -23,16 +23,23 @@ type Message = { role: 'user' | 'assistant'; content: string };
 
 type AiChatScreenProps = {
   onNavigateToWorkout?: () => void;
-  onNavigateToSleep?: () => void;
-  onNavigateToNutrition?: () => void;
 };
 
-const QUICK_ACTIONS = [] as const;
+type QuickAction = {
+  id: string;
+  label: string;
+  icon: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
+  iconColor: string;
+  gradientColors: [string, string];
+} & (
+    | { sendMessage: string; onPress?: never }
+    | { onPress: (nav: Record<string, any>) => void; sendMessage?: never }
+  );
+
+const QUICK_ACTIONS: QuickAction[] = [];
 
 export function AiChatScreen({
   onNavigateToWorkout,
-  onNavigateToSleep,
-  onNavigateToNutrition,
 }: AiChatScreenProps) {
   const { profile } = useProfile();
   const userId = profile?.id ?? null;
@@ -44,7 +51,7 @@ export function AiChatScreen({
   const [error, setError] = useState<string | null>(null);
   const [conversationReady, setConversationReady] = useState(false);
 
-  const nav = { onNavigateToWorkout, onNavigateToSleep, onNavigateToNutrition };
+  const nav = { onNavigateToWorkout };
 
   useEffect(() => {
     if (!userId) return;
@@ -110,7 +117,7 @@ export function AiChatScreen({
   );
 
   const leftElement = (
-    <Pressable style={styles.menuButton} onPress={() => {}} accessibilityLabel="Menu">
+    <Pressable style={styles.menuButton} onPress={() => { }} accessibilityLabel="Menu">
       <MaterialCommunityIcons name="menu" size={24} color={colors.textPrimary} />
     </Pressable>
   );
@@ -202,7 +209,7 @@ export function AiChatScreen({
         </ScrollView>
 
         <View style={styles.inputRow}>
-          <Pressable style={styles.inputIconBtn} onPress={() => {}} accessibilityLabel="Attach">
+          <Pressable style={styles.inputIconBtn} onPress={() => { }} accessibilityLabel="Attach">
             <MaterialCommunityIcons name="plus" size={22} color={colors.textPrimary} />
           </Pressable>
           <TextInput
@@ -215,7 +222,7 @@ export function AiChatScreen({
             multiline={false}
             maxLength={2000}
           />
-          <Pressable style={styles.inputIconBtn} onPress={() => {}} accessibilityLabel="Voice input">
+          <Pressable style={styles.inputIconBtn} onPress={() => { }} accessibilityLabel="Voice input">
             <MaterialCommunityIcons name="microphone-outline" size={22} color={colors.textPrimary} />
           </Pressable>
           <Pressable

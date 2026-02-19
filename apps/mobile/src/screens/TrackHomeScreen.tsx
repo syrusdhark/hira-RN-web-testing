@@ -24,9 +24,6 @@ export function TrackHomeScreen({
   onTabChange,
   onNavigateToWorkout,
   onStartTodayProgramWorkout,
-  onNavigateToSleep,
-  onNavigateToNutrition,
-  onNavigateToHabits,
   onNavigateToCart,
   onNavigateToPersonalInfo,
   onNavigateToPreferences,
@@ -50,9 +47,6 @@ export function TrackHomeScreen({
   onTabChange?: (key: string) => void;
   onNavigateToWorkout?: () => void;
   onStartTodayProgramWorkout?: (payload: StartProgramDayPayload) => void;
-  onNavigateToSleep?: () => void;
-  onNavigateToNutrition?: () => void;
-  onNavigateToHabits?: () => void;
   onNavigateToCart?: () => void;
   onNavigateToPersonalInfo?: () => void;
   onNavigateToPreferences?: () => void;
@@ -86,7 +80,7 @@ export function TrackHomeScreen({
       default:
         return (
           <WorkoutTrackerScreen
-            navigation={{ goBack: () => {} }}
+            navigation={{ goBack: () => { } }}
             onNavigateToProgram={onNavigateToProgram}
             onNavigateToTemplateCreate={onNavigateToTemplateCreate}
             onNavigateToMyWorkouts={onNavigateToMyWorkouts}
@@ -104,12 +98,10 @@ export function TrackHomeScreen({
         return (
           <AiChatScreen
             onNavigateToWorkout={onNavigateToWorkout}
-            onNavigateToSleep={onNavigateToSleep}
-            onNavigateToNutrition={onNavigateToNutrition}
           />
         );
       case 'progress':
-        return <WorkoutInsightsScreen navigation={{ goBack: () => {} }} />;
+        return <WorkoutInsightsScreen navigation={{ goBack: () => { } }} />;
       case 'community':
         return <CommunityScreen onNavigateToCreatePost={onNavigateToCreatePost} />;
     }

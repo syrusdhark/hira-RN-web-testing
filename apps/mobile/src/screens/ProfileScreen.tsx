@@ -8,8 +8,8 @@ import {
   StatusBar,
   Dimensions,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, radius, space, typography } from '../theme';
 import { Section } from '../components/Section';
@@ -82,12 +82,12 @@ export function ProfileScreen({
   return (
     <View style={styles.root}>
       {navigation ? <FloatingBackButton onPress={navigation.goBack} /> : null}
-      <LinearGradient
-        colors={['#2D2640', '#1A1725', colors.bgMidnight]}
-        style={[styles.gradient, { paddingTop }]}
-      />
-
-      <View style={styles.content}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={{ paddingTop, paddingBottom: space.xl }}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.content}>
         <View style={styles.avatarSection}>
           <View style={styles.avatarWrapper}>
             <View style={styles.avatarPlaceholder}>
@@ -229,6 +229,7 @@ export function ProfileScreen({
           </Section>
         ) : null}
       </View>
+      </ScrollView>
     </View>
   );
 }
@@ -269,12 +270,12 @@ function ProfileRow({
 
 const styles = StyleSheet.create({
   root: {
+    flex: 1,
     width: SCREEN_WIDTH,
+    backgroundColor: colors.bgMidnight,
   },
-  gradient: {
-    width: SCREEN_WIDTH,
-    paddingBottom: space.lg,
-    marginBottom: -space.md,
+  scroll: {
+    flex: 1,
   },
   content: {
     width: '100%',

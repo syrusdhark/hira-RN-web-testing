@@ -45,7 +45,7 @@ The project is a high-performance, design-system–driven mobile application foc
 
 4. **Workout Tracking**
    - **Workout Hub**: `WorkoutTrackerScreen` — Move card (program CTA), Muscle intensity, My Workouts, marketplace. Shown as the **Today** tab content (no back button) and as a standalone screen (back to track). Move card taps go to Program; "See all" goes to My Workouts; Muscle intensity goes to Workout Insights; back from each returns to the originating screen/tab.
-   - **Program**: `ProgramScreen`, `CreateProgramScreen` — week-by-week schedule, assign templates to days, start program day sessions.
+   - **Program**: `ProgramScreen`, `CreateProgramScreen` — week-by-week schedule, assign templates to days, start program day sessions. **Create Program**: Title, description, periodisation (weeks), and **WEEKLY SCHEDULE** with 7 days (Mon–Sun). User assigns a workout template per day via a "Choose workout" modal (templates from `useWorkoutTemplates`). Selected days show the workout name in a **gradient pill** (same style as ProgramScreen); unselected show "Select workout." Tapping a day **with** a workout expands a **dropdown** listing that template's exercises (single line per exercise: name left, sets/reps right) and a "Change workout" button; tapping a day **without** a workout opens the modal. On Create, `day_assignments` are sent to `useCreateProgram`, which inserts into `workout_program_day_templates` so every week's matching day gets the chosen template.
    - **Template Builder**: `TemplateCreateScreen` for custom workouts.
    - **Session Logger**: `TemplateSessionScreen` for active workout tracking (accepts program id / program day id for completion linking).
    - **Exercise Search**: `ExerciseSearchScreen` with database-driven search.
@@ -65,7 +65,7 @@ The project is a high-performance, design-system–driven mobile application foc
    - **Track home card (Routines)**: `HabitCard` in `OverviewCards.tsx` — label **ROUTINES** (violet), icon-first list (check/circle + truncated name, 10-char threshold + "..."), footer **"X of Y"** (completed of total). Up to 3 habits; data from same hooks, pre-processed in `TrackHomeScreen`.
 
 8. **Profile & Health**
-   - **Profile**: `ProfileScreen`, `PersonalInfoScreen`; `ProfileContext` for cached profile and health data. **Sign out**: Profile screen includes a Sign out button at the bottom; calls `supabase.auth.signOut()` (session cleared, app shows auth screens).
+   - **Profile**: `ProfileScreen`, `PersonalInfoScreen`; `ProfileContext` for cached profile and health data. Profile screen content is **scrollable** (wrapped in `ScrollView` with bottom padding) so Integrations and Sign out are reachable; screen uses a **solid black background** (`colors.bgMidnight`); the previous purple-to-black gradient was removed. **Sign out**: Profile screen includes a Sign out button at the bottom; calls `supabase.auth.signOut()` (session cleared, app shows auth screens).
    - **Health Data Test**: `HealthDataTestScreen` (e.g. native health module integration).
 
 9. **Marketplace (Shop)**
@@ -222,6 +222,11 @@ hira-ai/
     - Index on `meals (user_id, consumed_at)` to keep per-day queries fast.
     - Row Level Security + user-scoped policies for `meals`, `nutrition_daily_summary`, and `nutrition_goals` so nutrition data is always **per-user only**.
   - Existing workout and habit migrations kept in sync with the documented schema in `database-schema.md`.
+- **Create Program – Weekly schedule and day templates**:
+  - Below periodisation: WEEKLY SCHEDULE with 7 day rows. Per day: select a workout from templates (modal) or leave unset. Selected workouts shown in a gradient pill; unset days show "Select workout." Tapping a day with a workout expands a dropdown with that workout's exercises (name left, sets/reps right, single line) and "Change workout"; tapping a day without a workout opens the Choose workout modal.
+  - Data: `CreateProgramInput.day_assignments` (day_number 1–7 → template id); `useCreateProgram` inserts `workout_program_days` then `workout_program_day_templates` so all weeks get the same pattern.
+- **Profile screen**:
+  - Content wrapped in `ScrollView` (flex: 1, contentContainerStyle paddingTop/paddingBottom) so the full profile (including Integrations, Sign out) scrolls. Root background set to solid black (`colors.bgMidnight`); `LinearGradient` background removed.
 
 **Upcoming Priorities**:
 1. **Checkout Flow**: Complete Shop payment integration.

@@ -23,30 +23,6 @@ export interface UserContext {
       avoided_exercises?: string[];
     };
   };
-  nutrition: {
-    daily_goal?: {
-      calories: number;
-      protein: number;
-      carbs: number;
-      fats: number;
-    };
-    today_progress?: {
-      calories_consumed: number;
-      protein_consumed: number;
-    };
-    recent_meals?: Array<{
-      name: string;
-      time: string;
-      calories: number;
-    }>;
-  };
-  sleep: {
-    average_hours?: number;
-    last_night?: {
-      duration: number;
-      quality: string;
-    };
-  };
   memory: {
     // Raw memory payloads from ai_memory_snapshots, keyed by memory_type.
     // We deliberately keep this loose so the DB schema can evolve.
@@ -62,8 +38,6 @@ export async function buildUserContext(userId: string): Promise<UserContext> {
   const context: UserContext = {
     profile: {},
     workout: {},
-    nutrition: {},
-    sleep: {},
     memory: {},
   };
 
@@ -112,17 +86,6 @@ export async function buildUserContext(userId: string): Promise<UserContext> {
       );
     }
 
-    // 3. Nutrition data placeholders (to be replaced when tables exist)
-    context.nutrition.daily_goal = {
-      calories: 2000,
-      protein: 150,
-      carbs: 200,
-      fats: 65,
-    };
-
-    // 4. Sleep data placeholders (to be replaced when tables exist)
-    context.sleep.average_hours = 7.5;
-
     return context;
   } catch (error) {
     // We intentionally swallow errors here and return partial context
@@ -170,21 +133,5 @@ export function formatContextForPrompt(context: UserContext): string {
     );
   }
 
-  // Nutrition info
-  if (context.nutrition.daily_goal) {
-    parts.push(
-      `Nutrition Goal: ${context.nutrition.daily_goal.calories} cal, ` +
-        `${context.nutrition.daily_goal.protein}g protein, ` +
-        `${context.nutrition.daily_goal.carbs}g carbs, ` +
-        `${context.nutrition.daily_goal.fats}g fats`
-    );
-  }
-
-  // Sleep info
-  if (context.sleep.average_hours) {
-    parts.push(`Average Sleep: ${context.sleep.average_hours} hours`);
-  }
-
   return parts.join('\n');
 }
-

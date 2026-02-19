@@ -754,6 +754,15 @@ CREATE TABLE public.user_daily_activity (
   CONSTRAINT user_daily_activity_pkey PRIMARY KEY (user_id, activity_date),
   CONSTRAINT user_daily_activity_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
+CREATE TABLE public.user_exercise_column_preferences (
+  user_id uuid NOT NULL,
+  exercise_id uuid NOT NULL,
+  visible_columns ARRAY NOT NULL DEFAULT '{}'::text[] CHECK (array_length(visible_columns, 1) IS NULL OR array_length(visible_columns, 1) <= 4),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT user_exercise_column_preferences_pkey PRIMARY KEY (user_id, exercise_id),
+  CONSTRAINT user_exercise_column_preferences_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT user_exercise_column_preferences_exercise_id_fkey FOREIGN KEY (exercise_id) REFERENCES public.exercises(id)
+);
 CREATE TABLE public.user_habits (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL,
@@ -932,6 +941,15 @@ CREATE TABLE public.workout_session_sets (
   rest_seconds integer,
   rir integer CHECK (rir >= 0 AND rir <= 5),
   created_at timestamp with time zone DEFAULT now(),
+  rpe numeric CHECK (rpe >= 1::numeric AND rpe <= 10::numeric),
+  tempo text,
+  distance_meters numeric,
+  avg_heart_rate integer,
+  difficulty_level text CHECK (difficulty_level = ANY (ARRAY['easy'::text, 'moderate'::text, 'hard'::text, 'max'::text])),
+  side text CHECK (side = ANY (ARRAY['left'::text, 'right'::text, 'both'::text])),
+  hold_time_seconds integer,
+  pace_min_per_km numeric,
+  feeling_score integer CHECK (feeling_score >= 1 AND feeling_score <= 10),
   CONSTRAINT workout_session_sets_pkey PRIMARY KEY (id),
   CONSTRAINT workout_session_sets_exercise_fkey FOREIGN KEY (workout_session_exercise_id) REFERENCES public.workout_session_exercises(id)
 );
