@@ -270,6 +270,8 @@ export type CreateProgramInput = {
   restOnSunday?: boolean;
   /** day_number 1-7 -> workout_template_id; applied to every week's matching day */
   day_assignments?: Record<number, string> | null;
+  /** week_number (1-based) -> day_number (1-7) -> workout_template_id; when set, overrides day_assignments per week */
+  schedule_by_week?: Record<number, Record<number, string>> | null;
 };
 
 export function useCreateProgram() {
@@ -340,11 +342,16 @@ export function useCreateProgram() {
         throw new Error(daysError.message ?? 'Failed to create program days');
       }
 
+      const scheduleByWeek = input.schedule_by_week ?? null;
       const dayAssignments = input.day_assignments ?? null;
-      if (dayAssignments && typeof dayAssignments === 'object' && insertedDays?.length) {
+      const useScheduleByWeek = scheduleByWeek && typeof scheduleByWeek === 'object' && Object.keys(scheduleByWeek).length > 0;
+
+      if (insertedDays?.length) {
         const templateRows: Array<{ workout_program_day_id: string; workout_template_id: string; order_index: number }> = [];
         for (const day of insertedDays as { id: string; week_number: number; day_number: number }[]) {
-          const templateId = dayAssignments[day.day_number];
+          const templateId = useScheduleByWeek
+            ? scheduleByWeek[day.week_number]?.[day.day_number]
+            : (dayAssignments && typeof dayAssignments === 'object' ? dayAssignments[day.day_number] : undefined);
           if (templateId) {
             templateRows.push({
               workout_program_day_id: day.id,

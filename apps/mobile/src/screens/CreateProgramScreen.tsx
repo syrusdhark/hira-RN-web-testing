@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Modal,
+  Dimensions,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,19 +28,33 @@ type CreateProgramScreenProps = {
   onSuccess?: () => void;
 };
 
+const BACK_BUTTON_TOP = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) + 16 : 60;
+const BACK_BUTTON_HEIGHT = 40;
+const APP_BAR_BOTTOM = BACK_BUTTON_TOP + BACK_BUTTON_HEIGHT;
+
 export function CreateProgramScreen({ navigation, onSuccess }: CreateProgramScreenProps) {
-  const paddingTop = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) + 16 : 56;
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [durationWeeks, setDurationWeeks] = useState('4');
-  const [dayAssignments, setDayAssignments] = useState<Record<number, string | null>>({});
+  const [scheduleByWeek, setScheduleByWeek] = useState<Record<number, Record<number, string | null>>>({});
+  const [selectedWeek, setSelectedWeek] = useState(1);
   const [dayPickerOpen, setDayPickerOpen] = useState<number | null>(null);
   const [expandedDayNumber, setExpandedDayNumber] = useState<number | null>(null);
 
+  const weekPagerRef = useRef<ScrollView>(null);
+  const durationWeeksNum = Math.max(1, Math.min(12, parseInt(durationWeeks, 10) || 1));
+  const pageWidth = Dimensions.get('window').width - 2 * space.md;
+
+  useEffect(() => {
+    setSelectedWeek((prev) => Math.min(prev, durationWeeksNum));
+  }, [durationWeeksNum]);
+
   const createProgram = useCreateProgram();
   const { data: templates = [] } = useWorkoutTemplates();
-  const expandedTemplateId = expandedDayNumber != null ? (dayAssignments[expandedDayNumber] ?? null) : null;
+  const dayAssignmentsForSelectedWeek = scheduleByWeek[selectedWeek] ?? {};
+  const expandedTemplateId =
+    expandedDayNumber != null ? (dayAssignmentsForSelectedWeek[expandedDayNumber] ?? null) : null;
   const { data: expandedTemplate, isLoading: expandedTemplateLoading } = useWorkoutTemplate(expandedTemplateId);
 
   const templateTitleById: Record<string, string> = {};
@@ -48,12 +63,65 @@ export function CreateProgramScreen({ navigation, onSuccess }: CreateProgramScre
   }
 
   const handleDayPress = (dayNumber: number) => {
-    const templateId = dayAssignments[dayNumber] ?? null;
+    const templateId = dayAssignmentsForSelectedWeek[dayNumber] ?? null;
     if (templateId) {
       setExpandedDayNumber((prev) => (prev === dayNumber ? null : dayNumber));
     } else {
       setDayPickerOpen(dayNumber);
     }
+  };
+
+  const setDayAssignmentForWeek = (week: number, dayNumber: number, templateId: string | null) => {
+    setScheduleByWeek((prev) => ({
+      ...prev,
+      [week]: { ...(prev[week] ?? {}), [dayNumber]: templateId },
+    }));
+  };
+
+  const renderWeekDayList = (weekNumber: number) => {
+    const assignments = scheduleByWeek[weekNumber] ?? {};
+    return (
+      <View style={styles.dayList} key={weekNumber}>
+        {(Array.from({ length: 7 }, (_, i) => i + 1) as number[]).map((dayNumber) => {
+          const templateId = assignments[dayNumber] ?? null;
+          const label = templateId ? templateTitleById[templateId] ?? 'Workout' : 'Select workout';
+          const isExpanded = selectedWeek === weekNumber && expandedDayNumber === dayNumber;
+          const chevronIcon = templateId ? (isExpanded ? 'chevron-up' : 'chevron-down') : 'chevron-right';
+          return (
+            <View key={dayNumber} style={styles.dayContainer}>
+              <Pressable
+                style={({ pressed }) => [styles.dayRow, pressed && { opacity: 0.8 }]}
+                onPress={() => {
+                  if (selectedWeek !== weekNumber) {
+                    setSelectedWeek(weekNumber);
+                    weekPagerRef.current?.scrollTo({ x: (weekNumber - 1) * pageWidth, animated: true });
+                  }
+                  handleDayPress(dayNumber);
+                }}
+              >
+                <Text style={styles.dayRowName}>{DAY_NAMES[dayNumber - 1]}</Text>
+                <View style={styles.dayRowMiddle}>
+                  {templateId ? (
+                    <LinearGradient
+                      colors={['#424242', '#18181b']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 0, y: 1 }}
+                      style={styles.dayRowGradient}
+                    >
+                      <Text style={styles.dayRowGradientText} numberOfLines={1}>{label}</Text>
+                    </LinearGradient>
+                  ) : (
+                    <Text style={styles.dayRowPlaceholder} numberOfLines={1}>{label}</Text>
+                  )}
+                  <MaterialCommunityIcons name={chevronIcon} size={20} color={colors.textTertiary} style={styles.dayRowChevron} />
+                </View>
+              </Pressable>
+              {selectedWeek === weekNumber && renderExpandedContent(dayNumber)}
+            </View>
+          );
+        })}
+      </View>
+    );
   };
 
   const renderExpandedContent = (dayNumber: number) => {
@@ -124,10 +192,16 @@ export function CreateProgramScreen({ navigation, onSuccess }: CreateProgramScre
       return;
     }
 
-    const day_assignments: Record<number, string> = {};
-    for (let d = 1; d <= 7; d++) {
-      const tid = dayAssignments[d];
-      if (tid) day_assignments[d] = tid;
+    const schedule_by_week: Record<number, Record<number, string>> = {};
+    for (let w = 1; w <= weeks; w++) {
+      const weekData = scheduleByWeek[w];
+      if (!weekData) continue;
+      const dayEntries: Record<number, string> = {};
+      for (let d = 1; d <= 7; d++) {
+        const tid = weekData[d];
+        if (tid) dayEntries[d] = tid;
+      }
+      if (Object.keys(dayEntries).length > 0) schedule_by_week[w] = dayEntries;
     }
 
     createProgram.mutate(
@@ -136,7 +210,7 @@ export function CreateProgramScreen({ navigation, onSuccess }: CreateProgramScre
         description: description.trim() || null,
         duration_weeks: weeks,
         restOnSunday: true,
-        day_assignments: Object.keys(day_assignments).length > 0 ? day_assignments : undefined,
+        schedule_by_week: Object.keys(schedule_by_week).length > 0 ? schedule_by_week : undefined,
       },
       {
         onSuccess: () => {
@@ -158,7 +232,7 @@ export function CreateProgramScreen({ navigation, onSuccess }: CreateProgramScre
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardView}
       >
-        <View style={[styles.header, { paddingTop: paddingTop + 52 }]}>
+        <View style={[styles.header, { paddingTop: APP_BAR_BOTTOM + 16 }]}>
           <Text style={styles.screenTitle}>Create program</Text>
           <Text style={styles.subtitle}>Set up your program details and schedule.</Text>
         </View>
@@ -209,41 +283,54 @@ export function CreateProgramScreen({ navigation, onSuccess }: CreateProgramScre
             </View>
           </View>
 
-          <Text style={styles.label}>WEEKLY SCHEDULE</Text>
-          <View style={styles.dayList}>
-            {(Array.from({ length: 7 }, (_, i) => i + 1) as number[]).map((dayNumber) => {
-              const templateId = dayAssignments[dayNumber] ?? null;
-              const label = templateId ? templateTitleById[templateId] ?? 'Workout' : 'Select workout';
-              const isExpanded = expandedDayNumber === dayNumber;
-              const chevronIcon = templateId ? (isExpanded ? 'chevron-up' : 'chevron-down') : 'chevron-right';
+          <Text style={styles.label}>WEEK</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.weekScrollerContent}
+            style={styles.weekScroller}
+          >
+            {Array.from({ length: durationWeeksNum }, (_, i) => i + 1).map((w) => {
+              const isSelected = selectedWeek === w;
               return (
-                <View key={dayNumber} style={styles.dayContainer}>
-                  <Pressable
-                    style={({ pressed }) => [styles.dayRow, pressed && { opacity: 0.8 }]}
-                    onPress={() => handleDayPress(dayNumber)}
-                  >
-                    <Text style={styles.dayRowName}>{DAY_NAMES[dayNumber - 1]}</Text>
-                    <View style={styles.dayRowMiddle}>
-                      {templateId ? (
-                        <LinearGradient
-                          colors={['#424242', '#18181b']}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 0, y: 1 }}
-                          style={styles.dayRowGradient}
-                        >
-                          <Text style={styles.dayRowGradientText} numberOfLines={1}>{label}</Text>
-                        </LinearGradient>
-                      ) : (
-                        <Text style={styles.dayRowPlaceholder} numberOfLines={1}>{label}</Text>
-                      )}
-                      <MaterialCommunityIcons name={chevronIcon} size={20} color={colors.textTertiary} style={styles.dayRowChevron} />
-                    </View>
-                  </Pressable>
-                  {renderExpandedContent(dayNumber)}
-                </View>
+                <Pressable
+                  key={w}
+                  style={[styles.weekChip, isSelected && styles.weekChipSelected]}
+                  onPress={() => {
+                    setSelectedWeek(w);
+                    setExpandedDayNumber(null);
+                    weekPagerRef.current?.scrollTo({ x: (w - 1) * pageWidth, animated: true });
+                  }}
+                >
+                  <Text style={[styles.weekChipText, isSelected && styles.weekChipTextSelected]}>
+                    Week {w}
+                  </Text>
+                </Pressable>
               );
             })}
-          </View>
+          </ScrollView>
+
+          <Text style={styles.label}>WEEKLY SCHEDULE</Text>
+          <ScrollView
+            ref={weekPagerRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={(e) => {
+              const index = Math.round(e.nativeEvent.contentOffset.x / pageWidth);
+              const week = Math.max(1, Math.min(index + 1, durationWeeksNum));
+              setSelectedWeek(week);
+              setExpandedDayNumber(null);
+            }}
+            contentContainerStyle={styles.weekPagerContent}
+            style={styles.weekPager}
+          >
+            {Array.from({ length: durationWeeksNum }, (_, i) => i + 1).map((w) => (
+              <View key={w} style={[styles.weekPage, { width: pageWidth }]}>
+                {renderWeekDayList(w)}
+              </View>
+            ))}
+          </ScrollView>
 
           <Modal
             visible={dayPickerOpen !== null}
@@ -254,14 +341,16 @@ export function CreateProgramScreen({ navigation, onSuccess }: CreateProgramScre
             <Pressable style={styles.modalBackdrop} onPress={() => setDayPickerOpen(null)}>
               <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
                 <Text style={styles.modalTitle}>
-                  {dayPickerOpen != null ? `Choose workout for ${DAY_NAMES[dayPickerOpen - 1]}` : ''}
+                  {dayPickerOpen != null
+                    ? `Week ${selectedWeek} – ${DAY_NAMES[dayPickerOpen - 1]}`
+                    : ''}
                 </Text>
                 <ScrollView style={styles.modalList} keyboardShouldPersistTaps="handled">
                   <Pressable
                     style={({ pressed }) => [styles.modalItem, pressed && { opacity: 0.8 }]}
                     onPress={() => {
                       if (dayPickerOpen != null) {
-                        setDayAssignments((prev) => ({ ...prev, [dayPickerOpen]: null }));
+                        setDayAssignmentForWeek(selectedWeek, dayPickerOpen, null);
                         setDayPickerOpen(null);
                       }
                     }}
@@ -280,7 +369,7 @@ export function CreateProgramScreen({ navigation, onSuccess }: CreateProgramScre
                           style={({ pressed }) => [styles.modalItem, pressed && { opacity: 0.8 }]}
                           onPress={() => {
                             if (dayPickerOpen != null) {
-                              setDayAssignments((prev) => ({ ...prev, [dayPickerOpen]: t.id }));
+                              setDayAssignmentForWeek(selectedWeek, dayPickerOpen, t.id);
                               setDayPickerOpen(null);
                             }
                           }}
@@ -430,6 +519,42 @@ const styles = StyleSheet.create({
     ...typography.sm,
     color: colors.textTertiary,
     marginLeft: space.xs,
+  },
+  weekScroller: {
+    marginTop: space.xs,
+    marginBottom: space.sm,
+  },
+  weekScrollerContent: {
+    flexDirection: 'row',
+    gap: space.sm,
+    paddingVertical: space.xs,
+  },
+  weekChip: {
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    backgroundColor: colors.bgElevated,
+  },
+  weekChipSelected: {
+    backgroundColor: colors.primaryViolet,
+    borderColor: colors.primaryViolet,
+  },
+  weekChipText: {
+    ...typography.sm,
+    color: colors.textPrimary,
+    fontWeight: '600',
+  },
+  weekChipTextSelected: {
+    color: 'white',
+  },
+  weekPager: {
+    marginTop: space.xs,
+  },
+  weekPagerContent: {},
+  weekPage: {
+    paddingRight: space.md,
   },
   dayList: {
     marginTop: space.xs,

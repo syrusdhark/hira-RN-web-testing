@@ -221,53 +221,10 @@ export function WorkoutTrackerScreen({
             )))}
         </ScrollView>
 
-        {/* Workout Marketplace */}
-        <View style={styles.marketplaceHeader}>
-          <MaterialCommunityIcons name="storefront" size={20} color={colors.bodyOrange} />
-          <Text style={styles.sectionTitle}>Workout Marketplace</Text>
+        {/* Marketplace */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>Marketplace</Text>
         </View>
-
-        <View style={styles.featuredCardContainer}>
-          <LinearGradient
-            colors={['#617873', '#0C1E1A']} // Approximate teal gradient
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            locations={[0, 1]}
-            style={styles.featuredGradient}
-          >
-            <View style={styles.newDropTag}>
-              <Text style={styles.newDropText}>NEW DROP</Text>
-            </View>
-            <Text style={styles.featuredTitle}>Elite Athlete Series</Text>
-            <Text style={styles.featuredDesc}>Train like a pro with exclusive routines designed by olympic coaches.</Text>
-
-            <Pressable style={styles.viewCollectionBtn}>
-              <Text style={styles.viewCollectionText}>View Collection</Text>
-            </Pressable>
-          </LinearGradient>
-        </View>
-
-        <View style={styles.categoriesRow}>
-          <View style={styles.categoryCard}>
-            <View style={styles.catIconCircle}>
-              <MaterialCommunityIcons name="account-group" size={24} color={colors.bodyOrange} />
-            </View>
-            <Text style={styles.catTitle}>Community</Text>
-            <Text style={styles.catSub}>Top rated by users</Text>
-          </View>
-          <View style={styles.categoryCard}>
-            <View style={styles.catIconCircle}>
-              <MaterialCommunityIcons name="star" size={24} color={colors.bodyOrange} />
-            </View>
-            <Text style={styles.catTitle}>Premium</Text>
-            <Text style={styles.catSub}>Verified coaches</Text>
-          </View>
-        </View>
-
-        <Pressable style={styles.searchButton}>
-          <MaterialCommunityIcons name="magnify" size={20} color={colors.textSecondary} />
-          <Text style={styles.searchText}>Browse All Workouts</Text>
-        </Pressable>
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -616,106 +573,5 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // Marketplace
-  marketplaceHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    marginBottom: space.md,
-  },
-  featuredCardContainer: {
-    borderRadius: radius.xl,
-    overflow: 'hidden',
-    marginBottom: space.md,
-  },
-  featuredGradient: {
-    padding: space.lg,
-    minHeight: 180,
-  },
-  newDropTag: {
-    backgroundColor: colors.bodyOrange,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    marginBottom: space.sm,
-  },
-  newDropText: {
-    color: 'white',
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  featuredTitle: {
-    color: 'white',
-    fontSize: 22,
-    fontWeight: '800',
-    marginBottom: space.xs,
-  },
-  featuredDesc: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 13,
-    marginBottom: space.lg,
-    lineHeight: 18,
-  },
-  viewCollectionBtn: {
-    backgroundColor: 'white',
-    alignSelf: 'flex-start',
-    paddingHorizontal: space.lg,
-    paddingVertical: 10,
-    borderRadius: radius.full,
-  },
-  viewCollectionText: {
-    color: 'black',
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  categoriesRow: {
-    flexDirection: 'row',
-    gap: space.md,
-    marginBottom: space.lg,
-  },
-  categoryCard: {
-    flex: 1,
-    backgroundColor: colors.bgCharcoal,
-    borderRadius: radius.xl,
-    padding: space.md,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-  },
-  catIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.bgElevated,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: space.sm,
-  },
-  catTitle: {
-    color: colors.textPrimary,
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  catSub: {
-    color: colors.textTertiary,
-    fontSize: 11,
-  },
-  searchButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.bgCharcoal,
-    paddingVertical: space.md,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    gap: space.sm,
-  },
-  searchText: {
-    color: colors.textSecondary,
-    fontSize: 15,
-    fontWeight: '500',
-  },
 });
 

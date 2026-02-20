@@ -7,13 +7,13 @@ import {
   Pressable,
   ScrollView,
   KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useProfile } from '../context/ProfileContext';
-import { createConversation, sendChatMessage } from '../services/ai-chat.service';
+import { createConversation, sendChatMessage, shouldUseLocalAi } from '../services/ai-chat.service';
+import * as LocalAi from '../services/ai/local-ai.service';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { colors, radius, space, typography } from '../theme';
 
@@ -50,8 +50,37 @@ export function AiChatScreen({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [conversationReady, setConversationReady] = useState(false);
+  const [isOllamaReady, setIsOllamaReady] = useState<boolean | null>(null);
+  const [isWarming, setIsWarming] = useState(false);
 
   const nav = { onNavigateToWorkout };
+
+  const checkOllama = useCallback(async () => {
+    const useLocal = shouldUseLocalAi();
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/cd660e56-307d-4b97-a0b1-1e6647da9f0c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AiChatScreen.tsx:checkOllama',message:'checkOllama',data:{useLocal},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
+    // #endregion
+    if (!useLocal) return;
+    setIsOllamaReady(null);
+    const available = await LocalAi.isAvailable();
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/cd660e56-307d-4b97-a0b1-1e6647da9f0c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AiChatScreen.tsx:checkOllama',message:'after isAvailable',data:{available},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
+    // #endregion
+    setIsOllamaReady(available);
+    if (available) {
+      setIsWarming(true);
+      await LocalAi.warmup();
+      setIsWarming(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (shouldUseLocalAi()) {
+      checkOllama();
+    } else {
+      setIsOllamaReady(true);
+    }
+  }, [checkOllama]);
 
   useEffect(() => {
     if (!userId) return;
@@ -123,6 +152,58 @@ export function AiChatScreen({
   );
 
   const showGreeting = messages.length === 0;
+  const useLocal = shouldUseLocalAi();
+  const showNotReadyCard = useLocal && isOllamaReady === false;
+  const showWarmingCard = useLocal && isWarming;
+  const showCheckingCard = useLocal && isOllamaReady === null;
+
+  if (showCheckingCard) {
+    return (
+      <View style={styles.root}>
+        <ScreenHeader leftElement={leftElement} />
+        <View style={styles.centeredCard}>
+          <ActivityIndicator size="large" color={colors.primaryViolet} />
+          <Text style={styles.warmingSubtext}>Checking connection...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (showNotReadyCard) {
+    return (
+      <View style={styles.root}>
+        <ScreenHeader leftElement={leftElement} />
+        <View style={styles.centeredCard}>
+          <Text style={styles.errorCardTitle}>Local AI not running</Text>
+          <Text style={styles.errorCardText}>
+            Ollama is not running or not reachable. Start it on your computer:
+          </Text>
+          <View style={styles.codeBlock}>
+            <Text style={styles.codeText}>ollama serve</Text>
+          </View>
+          <Text style={styles.errorCardSubtext}>
+            Then ensure the model is installed: ollama pull phi4-mini:latest
+          </Text>
+          <Pressable style={styles.retryButton} onPress={checkOllama}>
+            <Text style={styles.retryButtonText}>Retry connection</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
+  if (showWarmingCard) {
+    return (
+      <View style={styles.root}>
+        <ScreenHeader leftElement={leftElement} />
+        <View style={styles.centeredCard}>
+          <ActivityIndicator size="large" color={colors.primaryViolet} />
+          <Text style={styles.warmingTitle}>Warming up AI model...</Text>
+          <Text style={styles.warmingSubtext}>First load can take 10–30 seconds</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>
@@ -130,8 +211,8 @@ export function AiChatScreen({
 
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        behavior="padding"
+        keyboardVerticalOffset={90}
       >
         <ScrollView
           style={styles.scroll}
@@ -390,5 +471,64 @@ const styles = StyleSheet.create({
   },
   sendBtnDisabled: {
     opacity: 0.5,
+  },
+  centeredCard: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: space.xl,
+  },
+  errorCardTitle: {
+    ...typography.xl,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: space.sm,
+    textAlign: 'center',
+  },
+  errorCardText: {
+    ...typography.base,
+    color: colors.textSecondary,
+    marginBottom: space.md,
+    textAlign: 'center',
+  },
+  errorCardSubtext: {
+    ...typography.sm,
+    color: colors.textTertiary,
+    marginBottom: space.lg,
+    textAlign: 'center',
+  },
+  codeBlock: {
+    backgroundColor: colors.bgCharcoal,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.md,
+    borderRadius: radius.md,
+    marginBottom: space.md,
+  },
+  codeText: {
+    fontFamily: 'monospace',
+    fontSize: 14,
+    color: colors.textPrimary,
+  },
+  retryButton: {
+    backgroundColor: colors.primaryViolet,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.lg,
+    borderRadius: radius.lg,
+  },
+  retryButtonText: {
+    ...typography.base,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  warmingTitle: {
+    ...typography.lg,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginTop: space.lg,
+  },
+  warmingSubtext: {
+    ...typography.sm,
+    color: colors.textSecondary,
+    marginTop: space.xs,
   },
 });

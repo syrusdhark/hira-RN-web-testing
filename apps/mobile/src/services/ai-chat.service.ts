@@ -5,6 +5,11 @@ import {
   formatContextForPrompt,
   type UserContext,
 } from './ai-context.service';
+import { buildContextForQuery } from './ai/context-builder.service';
+import { optimizeForSmallModel } from './ai/context-optimizer.service';
+import * as LocalAi from './ai/local-ai.service';
+import * as ProductionAi from './ai/production-ai.service';
+import { logUsage } from './ai/cost-monitor.service';
 
 function getAiApiKey(): string {
   const key =
@@ -17,6 +22,29 @@ function getAiApiKey(): string {
 function isOpenRouterKey(key: string): boolean {
   return key.startsWith('sk-or-');
 }
+
+/** True when local AI (e.g. Ollama) is enabled and URL is set. No API key required. */
+export function shouldUseLocalAi(): boolean {
+  const useLocal =
+    Constants.expoConfig?.extra?.useLocalAi ??
+    process.env.EXPO_PUBLIC_USE_LOCAL_AI;
+  const url =
+    Constants.expoConfig?.extra?.localAiUrl ??
+    process.env.EXPO_PUBLIC_LOCAL_AI_URL;
+  return useLocal === 'true' && typeof url === 'string' && url.trim().length > 0;
+}
+
+/** Shorter system prompt for small local models (e.g. phi4-mini). */
+const SHORT_SYSTEM_PROMPT = `You are Hira, a supportive wellness coach.
+
+RULES:
+- Be warm and encouraging
+- Focus on how the user FEELS
+- Keep responses under 75 words
+- Never shame or judge
+- Suggest, don't command
+
+TONE: "Let's think about..." not "You should..."`;
 
 // Primary system prompt with personality, expertise, and safety rails
 const ENHANCED_SYSTEM_PROMPT = `You are Hira, an elite personal trainer and nutrition coach integrated into the Hira fitness app.
@@ -163,79 +191,50 @@ export async function sendChatMessage(
       })),
     ];
 
-    // 5. Call the AI API (OpenRouter or Anthropic)
-    const apiKey = getAiApiKey();
-    if (!apiKey) {
-      throw new Error(
-        'Missing API key. Add EXPO_PUBLIC_ANTHROPIC_API_KEY to apps/mobile/.env (use an Anthropic key or an OpenRouter key) and restart the dev server.'
-      );
-    }
-
-    const useOpenRouter = isOpenRouterKey(apiKey);
+    // 5. Call the AI API (local Ollama or OpenRouter or Anthropic)
     let assistantMessage: string;
     let tokenCount: number | null = null;
 
-    if (useOpenRouter) {
-      // OpenRouter: OpenAI-style endpoint, Bearer auth, system as first message
-      const openRouterMessages = [
-        { role: 'system' as const, content: SYSTEM_PROMPT },
-        ...messages,
-      ];
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          // DeepSeek via OpenRouter
-          model: 'deepseek/deepseek-r1-0528:free',
-          max_tokens: 1000,
-          messages: openRouterMessages,
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        const msg =
-          (data?.error?.message ?? data?.error) || 'OpenRouter API error';
-        throw new Error(msg);
-      }
-      tokenCount = data?.usage?.completion_tokens ?? data?.usage?.total_tokens ?? null;
-      const content =
-        data?.choices?.[0]?.message?.content ??
-        data?.choices?.[0]?.text ??
-        '';
-      assistantMessage = typeof content === 'string' ? content : '';
+    if (shouldUseLocalAi()) {
+      const conversationHistory = messages.slice(0, -1).map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+      const lastUserContent =
+        messages.length > 0 && messages[messages.length - 1].role === 'user'
+          ? messages[messages.length - 1].content
+          : userMessage;
+      const wellnessContext = await buildContextForQuery(userId, userMessage, 7);
+      const contextStr = optimizeForSmallModel(wellnessContext);
+      const result = await LocalAi.chat(
+        SHORT_SYSTEM_PROMPT,
+        lastUserContent,
+        contextStr,
+        conversationHistory
+      );
+      assistantMessage = result.response;
+      tokenCount = result.tokensUsed;
     } else {
-      // Anthropic Messages API
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          system: SYSTEM_PROMPT,
-          messages,
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        const message =
-          (data && data.error && data.error.message) ||
-          'AI API error (non-OK response)';
-        throw new Error(message);
+      const apiKey = getAiApiKey();
+      if (!apiKey) {
+        throw new Error(
+          'Missing API key. Add EXPO_PUBLIC_ANTHROPIC_API_KEY to apps/mobile/.env (use an Anthropic key or an OpenRouter key) and restart the dev server.'
+        );
       }
-      tokenCount = data.usage?.output_tokens ?? null;
-      const contentArray = Array.isArray(data.content) ? data.content : [];
-      const firstTextBlock = contentArray[0];
-      assistantMessage =
-        firstTextBlock && typeof firstTextBlock.text === 'string'
-          ? firstTextBlock.text
-          : '';
+      const result = await ProductionAi.chat({
+        apiKey,
+        systemPrompt: SYSTEM_PROMPT,
+        messages,
+        max_tokens: 1000,
+      });
+      assistantMessage = result.response;
+      tokenCount = result.tokensUsed;
+      await logUsage(
+        userId,
+        result.tokensUsed,
+        result.cost,
+        isOpenRouterKey(apiKey) ? 'openrouter' : 'anthropic'
+      );
     }
 
     if (!assistantMessage) {
@@ -245,12 +244,13 @@ export async function sendChatMessage(
     }
 
     // 6. Save assistant response to database
+    const modelVersion = shouldUseLocalAi() ? 'local' : 'claude-sonnet-4-20250514';
     const { error: saveAssistantError } = await supabase.from('ai_messages').insert({
       conversation_id: conversationId,
       role: 'assistant',
       content: assistantMessage,
       token_count: tokenCount,
-      model_version: 'claude-sonnet-4-20250514',
+      model_version: modelVersion,
     });
 
     if (saveAssistantError) throw saveAssistantError;
