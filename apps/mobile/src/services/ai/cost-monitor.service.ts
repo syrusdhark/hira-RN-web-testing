@@ -85,3 +85,25 @@ export async function checkDailyLimit(
   const used = (data ?? []).reduce((s, r) => s + (Number(r.tokens_used) || 0), 0);
   return used < tokenLimit;
 }
+
+/**
+ * Return today's (UTC) token usage for the user. For UI display (e.g. "X / 10K tokens").
+ */
+export async function getDailyUsage(userId: string): Promise<{
+  tokensUsed: number;
+}> {
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const { data, error } = await supabase
+    .from('ai_usage_logs')
+    .select('tokens_used')
+    .eq('user_id', userId)
+    .gte('created_at', today.toISOString());
+
+  if (error) {
+    return { tokensUsed: 0 };
+  }
+
+  const tokensUsed = (data ?? []).reduce((s, r) => s + (Number(r.tokens_used) || 0), 0);
+  return { tokensUsed };
+}

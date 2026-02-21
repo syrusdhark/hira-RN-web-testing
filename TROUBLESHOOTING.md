@@ -81,23 +81,30 @@ npx expo start --clear
 npm run android
 ```
 
-### Issue: Path Too Long Error
+### Issue: Path Too Long / packageDebug FAILED (Windows)
 
-**Error Message:**
-```
-The maximum object file path length is 250 characters
-```
+**Symptoms:**
+- CMake warns: "The object file directory ... has 189+ characters. The maximum full path to an object file is 250 characters"
+- Build fails at `:app:packageDebug` with "IncrementalSplitterRunnable" or similar
 
-**Solution:**
-This is a Windows limitation. Move your project to a shorter path:
+**Cause:** On Windows, the combined path to `android/app/.cxx/...` and native module paths (e.g. `node_modules\@react-native-community\datetimepicker\...`) can exceed 250 characters, so the Android native build or packaging step fails.
 
-**Current:** `C:\Users\saisa\hira-ai-app-reactnative\apps\mobile`
-**Better:** `C:\hira\apps\mobile` or `C:\projects\hira\apps\mobile`
+**Solution (recommended):** Move the project to a **shorter path**. This only changes where the folder lives on disk; it does **not** affect the web app. The web app uses the same source code and the same commands (`npm run web`, `npm run build:web`) from the new location.
 
-1. Close all terminals and editors
-2. Move the entire project folder to a shorter path
-3. Reopen in the new location
-4. Run `npm install` again
+- **Current (example):** `C:\Users\saisa\Desktop\hira-ai-app-capacitor\apps\mobile`  
+- **Better:** `C:\hira\apps\mobile` or `C:\dev\hira\apps\mobile`
+
+1. Close all terminals and editors using the project.
+2. Move the entire repo (e.g. `hira-ai-app-capacitor`) to the shorter path (e.g. `C:\hira` so the app is at `C:\hira\apps\mobile`).
+3. Reopen the project from the new location.
+4. In `apps/mobile`, run `npm install` (and `npm run android` when ready).
+
+**Optional – enable long paths (Windows 10/11):**  
+Enabling long path support can help in some cases (e.g. packaging), but CMake/NDK may still enforce ~250 characters for object paths. To enable:
+
+- **Via PowerShell (Admin):**  
+  `New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force`  
+  Then restart the terminal (and optionally the PC).
 
 ### Issue: Gradle Daemon Issues
 

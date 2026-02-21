@@ -174,7 +174,6 @@ export default function App() {
 
   // Debug: Log sessionTemplateId changes
   useEffect(() => {
-    console.log('App: sessionTemplateId changed to:', sessionTemplateId);
   }, [sessionTemplateId]);
 
   if (hasSeenWelcomeSplash === null) {
@@ -360,7 +359,6 @@ export default function App() {
                       }
                     }}
                     onStartSession={() => {
-                      console.log('App: Starting session from TemplateCreateScreen with editingTemplateId:', editingTemplateId);
                       if (editingTemplateId) {
                         React.startTransition(() => {
                           setSessionTemplateId(editingTemplateId);

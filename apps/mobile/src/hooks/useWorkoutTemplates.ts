@@ -51,11 +51,6 @@ export function useWorkoutTemplates() {
                 throw error;
             }
 
-            console.log('Fetched templates:', data?.length, 'records');
-            if (data && data.length > 0) {
-                console.log('Template structure:', JSON.stringify(data[0], null, 2));
-            }
-
             return data || [];
         },
     });
@@ -118,7 +113,6 @@ export function useWorkoutTemplate(templateId: string | null) {
                 }
             }
 
-            console.log('Fetched template details:', data);
             return data;
         },
         enabled: !!templateId,

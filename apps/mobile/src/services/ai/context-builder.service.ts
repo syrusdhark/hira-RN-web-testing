@@ -99,10 +99,9 @@ export async function buildContextForQuery(
       context.patterns = await getWorkoutPatterns(userId);
       break;
     case 'nutrition':
-      context.recent_activity = await getRecentActivity(userId, Math.min(3, maxHistoryDays));
-      break;
     case 'sleep':
-      context.current_state = await getCurrentState(userId);
+      // No app-specific nutrition/sleep data; context stays core + goals. AI can still give general advice.
+      context.recent_activity = await getRecentActivity(userId, Math.min(3, maxHistoryDays));
       break;
     case 'general':
       break;

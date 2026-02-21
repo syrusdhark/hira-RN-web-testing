@@ -16,5 +16,16 @@ export {
 export { optimizeForSmallModel } from './context-optimizer.service';
 export { chat as productionAiChat } from './production-ai.service';
 export type { ProductionChatResult, ProductionChatParams } from './production-ai.service';
-export { logUsage, getMonthlyUsage, checkDailyLimit } from './cost-monitor.service';
+export { logUsage, getMonthlyUsage, checkDailyLimit, getDailyUsage } from './cost-monitor.service';
 export type { AiUsageProvider } from './cost-monitor.service';
+export {
+  sendMessage,
+  getUserUsage,
+  clearConversation,
+  getUserConversations,
+  getConversationHistory,
+  createConversation,
+  shouldUseLocalAi,
+  DAILY_LIMIT_REACHED,
+} from './ai-chat-service-v2';
+export type { UserUsage, ConversationSummary, HistoryMessage } from './ai-chat-service-v2';

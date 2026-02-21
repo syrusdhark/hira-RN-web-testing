@@ -267,7 +267,6 @@ export function TemplateSessionScreen({
                 return;
             }
 
-            console.log('TemplateSessionScreen: Loading template with ID:', templateId);
             setLoading(true);
 
             try {
@@ -311,8 +310,6 @@ export function TemplateSessionScreen({
                     if (isActive) setLoading(false);
                     return;
                 }
-
-                console.log('Fetched exercises:', templateExercises?.length);
 
                 if (!templateExercises || templateExercises.length === 0) {
                     if (isActive) {

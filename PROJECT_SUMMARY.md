@@ -10,7 +10,7 @@
 - **Backend**: NestJS (scaffold).
 - **Database/Auth**: Supabase (PostgreSQL + Auth).
 
-The project is a design-system–driven mobile application focused on tracking workouts, nutrition, and sleep, with an integrated AI wellness coach (Hira) and marketplace.
+The project is a design-system–driven mobile application focused on tracking workouts, with an integrated AI wellness coach (Hira) and marketplace. Nutrition, Sleep, and Habits are not in the current app scope (see 4-week plan); related DB tables may exist for future use.
 
 ---
 
@@ -22,7 +22,7 @@ The project is a design-system–driven mobile application focused on tracking w
 **Tech Stack**: React Native, Expo (~54), Capacitor (7), TypeScript, TanStack Query, Supabase Client, design tokens (`src/theme.ts`: colors, space, typography, radius), expo-linear-gradient.  
 **Native builds**: Capacitor config at `apps/mobile/capacitor.config.ts` (appId `com.anonymous.hiraai`, webDir `dist`). Use `npm run cap:sync` then `npm run cap:android` / `npm run cap:ios` for native runs after building.
 
-**Today tab**: The **Today** tab content is the **Workout Tracker** screen (`WorkoutTrackerScreen`) embedded in `TrackHomeScreen` — Move card (program CTA), Muscle intensity, My Workouts, marketplace. The old tracker-home layout (Move + Nourish + Sleep + Routines cards) is no longer shown on Today; other tabs (Buy, Hira, Connect, Profile) are unchanged. Back from Program, My Workouts, or Workout Insights (Muscle intensity) returns to the same origin (Today tab or standalone Workout screen) via `programReturnScreen`, `myWorkoutsReturnScreen`, and `workoutInsightsReturnScreen` in `App.tsx` (in-app and hardware back).
+**Today tab**: The **Today** tab content is the **Workout Tracker** screen (`WorkoutTrackerScreen`) embedded in `TrackHomeScreen` — Move card (program CTA), Muscle intensity, My Workouts, marketplace. **Tabs**: Buy, Today, Hira, Connect, Profile (5 tabs; Workout Insights reachable from Today). Back from Program, My Workouts, or Workout Insights returns to the same origin via `programReturnScreen`, `myWorkoutsReturnScreen`, and `workoutInsightsReturnScreen` in `App.tsx` (in-app and hardware back).
 
 **Move card (Workout Tracker)**: When used as the program entry, the card shows **"Create your own program"** with no Start button and no time icon / "High intensity" subtitle (`NextWorkoutCard` props `hideSubtitle`, `hideCta`). Tapping the card navigates to the Program screen.
 **Gamification (current state)**: **XP** is disabled in the app (no XP GAINED radial, no rank/XP on profile; hooks and DB tables remain for future use). **Streak** is shown on the tracker home header badge only.
@@ -36,15 +36,15 @@ The project is a design-system–driven mobile application focused on tracking w
 
 2. **Navigation**
    - **Core**: State-based navigation in `App.tsx`.
-   - **Main Tabs**: `TrackHomeScreen` with tabs: **Buy** (Shop), **Today** (Workout Tracker content), **Hira** (AI Chat), **Connect** (Community), **Profile**. Bottom tab bar uses `BottomTabBar` + `TabItem` with per-tab animation (Reanimated) and white active state. **Today** tab renders `WorkoutTrackerScreen` (no back button when embedded); standalone Workout Tracker is reachable when `currentScreen === 'workout'` and shows a back button to track.
+   - **Main Tabs**: `TrackHomeScreen` with 5 tabs: **Buy** (Shop), **Today** (Workout Tracker), **Hira** (AI Chat v2), **Connect** (Community), **Profile**. Bottom tab bar uses `BottomTabBar` + `TabItem` with per-tab animation (Reanimated) and white active state. **Today** tab renders `WorkoutTrackerScreen` (no back button when embedded); standalone Workout Tracker when `currentScreen === 'workout'`; Workout Insights from Today link.
    - **Return-screen pattern**: Opening **Program**, **My Workouts**, or **Workout Insights** from the Today tab stores return screen `'track'`; opening from the standalone Workout Tracker stores `'workout'`. Back (in-app and Android hardware back) uses the stored value so users return to the correct tab/screen.
-   - **Screens**: Workout Tracker (hub), Program, Create Program, Template Create/Session, My Workouts, Workout History, Workout Insights (Muscle intensity), Nutrition, Sleep, Habit Tracker, Shop, Cart, Personal Info, Community, Create Post, and others.
+   - **Screens**: Workout Tracker (hub), Program, Create Program, Template Create/Session, My Workouts, Workout History, Workout Insights (Muscle intensity), Shop, Cart, Personal Info, Community, Create Post, and others.
 
 3. **AI Chat (Hira)**
-   - **AiChatScreen**: In-app AI wellness coach tab with greeting, quick-action cards (Log workout, Sleep tip, Macros, Start a meditation), and chat input.
-   - **Backend**: `ai-chat.service.ts` — `createConversation(userId)`, `sendChatMessage(userId, conversationId, userMessage)`; supports Anthropic and OpenRouter APIs (key via `EXPO_PUBLIC_ANTHROPIC_API_KEY`).
-   - **Context**: `ai-context.service.ts` builds user context (profile, workout, nutrition, sleep, memory) for personalized responses.
-   - **Persistence**: Messages and conversations stored in Supabase (`ai_messages`, `ai_conversations`).
+   - **AiChatScreen**: In-app AI wellness coach tab with greeting, quick-suggestion chips (e.g. "Should I workout today?", "How am I progressing?"), conversation history, usage badge (X / 10K tokens or "Limit reached"), Clear chat, and "Hira is thinking…" during replies.
+   - **Backend**: `ai-chat.service.ts` and **AI service v2** (`services/ai/ai-chat-service-v2.ts`) — `sendMessage(userId, userMessage, conversationId?)`, `getUserUsage(userId)`, `clearConversation(conversationId)`, `getConversationHistory(conversationId)`; daily token limit (e.g. 10K) for production API; supports Anthropic and OpenRouter (key via `EXPO_PUBLIC_ANTHROPIC_API_KEY`) and local Ollama.
+   - **Context**: `ai-context.service.ts` and `context-builder.service.ts` build user context (profile, workout) for personalized responses; nutrition/sleep are keyword-only (no app data).
+   - **Persistence**: Messages and conversations in Supabase (`ai_messages`, `ai_conversations`); usage in `ai_usage_logs`.
 
 4. **Workout Tracking**
    - **Workout Hub**: `WorkoutTrackerScreen` — Move card (program CTA), Muscle intensity, My Workouts, marketplace. Shown as the **Today** tab content (no back button) and as a standalone screen (back to track). Move card taps go to Program; "See all" goes to My Workouts; Muscle intensity goes to Workout Insights; back from each returns to the originating screen/tab.
@@ -54,37 +54,24 @@ The project is a design-system–driven mobile application focused on tracking w
    - **Exercise Search**: `ExerciseSearchScreen` with database-driven search.
    - **My Workouts**: `MyWorkoutsScreen`. **Workout Insights**: `WorkoutInsightsScreen` (Muscle intensity). **Activity Analytics**: `ActivityAnalyticsScreen` for steps/distance/pace.
 
-5. **Nutrition Tracking**
-   - **Dashboard**: `NutritionDetailsScreen` — calories, macros, daily summary.
-   - **Meal Logging**: `AddMealScreen`, `FoodSearchScreen`; atomic logging via `log_meal` RPC and `useNutrition` / `NutritionContext`.
-   - **Food Search**: Real-time search and filtering.
-
-6. **Sleep & Recovery**
-   - **Sleep Tracker**: `SleepTrackerScreen` for duration and quality.
-
-7. **Habits (Routines)**
-   - **Habit Tracker**: `HabitTrackerScreen` — weekly consistency view, MY HABITS grid (DB-driven), ADD HABIT card (no FAB). Create/Edit/Delete via `CreateHabitScreen`, `EditHabitScreen`; long-press menu on habit cards. **Habit Insights**: `HabitInsightsScreen`, `HabitDailyInsightsScreen` with local streak/rate utilities (`habitInsightsUtils.ts`).
-   - **Data**: `user_habits`, `habit_completions` in Supabase; types in `types/habits.ts`; hooks in `useHabits.ts` (`useHabits`, `useHabitCompletions`, `useUpsertHabitCompletion`, `useCreateHabit`, `useUpdateHabit`, `useDeleteHabit`).
-   - **Track home card (Routines)**: `HabitCard` in `OverviewCards.tsx` — label **ROUTINES** (violet), icon-first list (check/circle + truncated name, 10-char threshold + "..."), footer **"X of Y"** (completed of total). Up to 3 habits; data from same hooks, pre-processed in `TrackHomeScreen`.
-
-8. **Profile & Health**
+5. **Profile & Health**
    - **Profile**: `ProfileScreen`, `PersonalInfoScreen`; `ProfileContext` for cached profile and health data. Profile screen content is **scrollable** (wrapped in `ScrollView` with bottom padding) so Integrations and Sign out are reachable; screen uses a **solid black background** (`colors.bgMidnight`); the previous purple-to-black gradient was removed. **Sign out**: Profile screen includes a Sign out button at the bottom; calls `supabase.auth.signOut()` (session cleared, app shows auth screens).
    - **Health Data Test**: `HealthDataTestScreen` (e.g. native health module integration).
 
-9. **Marketplace (Shop)**
+6. **Marketplace (Shop)**
    - **Browse**: `ShopHomeScreen` — featured supplements, templates, categories.
    - **Cart**: `CartScreen` with `CartContext`, Supabase-backed cart, optimistic updates.
 
-10. **Community Feed**
+7. **Community Feed**
    - **CommunityScreen**: Feed with tabs **For You**, **Following**, **Trending**; full-width **Create Post** button below tabs; cursor-based pagination via `get_community_feed` RPC.
    - **CreatePostScreen**: New post flow — header (X, "New Post", Post), author + visibility dropdown (**Public** / **Friends**), content input, @ Tag Friends / # Tag Activity pills, AI Content Gen banner, media row (Photo, Video, Poll, Location, More). Submit via `useCreatePost`; visibility and media are UI-only for now.
    - **Post cards**: `CommunityPostCard` — avatar, author, Follow, type tag, body, media, tags, like/comment/share/bookmark. Like and Follow wired to `useLikePost`, `useFollowAuthor`.
    - **Data**: `useCommunityFeed` / `useCommunityFeedFlatItems` (infinite query), `useCommunityActions` (like, follow, comment, create post). Optional `useCommunityPostRealtime()` to invalidate feed on post count changes. Types in `types/community.ts`.
 
-11. **Data & Services**
+8. **Data & Services**
    - **Supabase**: Direct client usage with RLS.
-   - **TanStack Query**: Caching and data fetching (`useWorkoutTemplates`, `useShopProducts`, `useFoodLibrarySearch`, `useCommunityFeed`, etc.).
-   - **Services**: `ai-chat.service.ts`, `ai-context.service.ts`, `HealthService.ts`, `HealthNormalizer.ts`, offline-storage and meal-related logic.
+   - **TanStack Query**: Caching and data fetching (`useWorkoutTemplates`, `useShopProducts`, `useCommunityFeed`, etc.).
+   - **Services**: `ai-chat.service.ts`, `ai-context.service.ts`, `HealthService.ts`, `HealthNormalizer.ts`.
 
 ### Backend (`apps/backend`)
 
@@ -131,6 +118,60 @@ graph TD
 
 ---
 
+## Code structure and screen architecture
+
+- **Navigation model**: [App.tsx](apps/mobile/src/App.tsx) uses a single `screenStack` state (array of `ScreenKey`). `navigateTo(screen)` pushes a screen; `goBack()` pops. No file-based router; every screen is a conditional render in `App.tsx` (`currentScreen === 'track'` → `TrackHomeScreen`, etc.). Auth uses React Navigation stack (`AuthStack.Navigator`) for SignIn/SignUp; after login, the rest is state-driven.
+- **Auth and onboarding gate**: `AuthenticatedLayout` wraps authenticated content: if `profile?.full_name` is missing, it renders `OnboardingScreen` until complete; otherwise it renders `children` (the main screen tree).
+- **Screen composition pattern**: Most authenticated screens follow:
+  - **Root**: `EnvironmentContainer` ([EnvironmentContainer.tsx](apps/mobile/src/components/EnvironmentContainer.tsx)) — full-height layout, optional `ScrollView`, padding (`space.md` horizontal, 110px bottom for tab bar), optional fixed `footer`.
+  - **Header**: `ScreenHeader` ([ScreenHeader.tsx](apps/mobile/src/components/ScreenHeader.tsx)) — left slot (e.g. back button), optional `rightBadges`, optional cart button. Uses `colors`, `space`, `typography` from theme; respects `StatusBar.currentHeight` on Android.
+  - **Content**: One or more `Section` wrappers ([Section.tsx](apps/mobile/src/components/Section.tsx)) — spacing between blocks (`xs` | `sm` | `md` | `lg` mapped to [theme.ts](apps/mobile/src/theme.ts) `space`).
+  - **Design tokens**: All from [theme.ts](apps/mobile/src/theme.ts): `colors` (e.g. `bgMidnight`, `primaryViolet`, `textPrimary`), `space`, `radius`, `typography`. Components import theme and use these tokens instead of hardcoded values.
+- **Tab shell**: The main app shell is `TrackHomeScreen`, which holds tab state and renders one of: `ShopHomeScreen`, `WorkoutTrackerScreen` (Today), `AiChatScreen`, `CommunityScreen`, or `ProfileScreen`. Tabs use [BottomTabBar](apps/mobile/src/components/BottomTabBar.tsx) + [TabItem](apps/mobile/src/components/TabItem.tsx) (Reanimated for active state). Tab config is `TRACK_TABS` in [TrackHomeScreen.tsx](apps/mobile/src/screens/TrackHomeScreen.tsx) (icons: MaterialCommunityIcons name or custom `iconImage` require).
+- **Screen–data flow**: Screens receive navigation callbacks as props (e.g. `onNavigateToProgram`, `goBack`). Data comes from hooks (e.g. `useWorkoutTemplates`, `useProfile`) and contexts (`ProfileContext`, `CartContext`). TanStack Query for server state, React Context for global client state; no Redux.
+
+**Screen reference**
+
+| ScreenKey | Component | Layout | Primary data |
+|-----------|-----------|--------|--------------|
+| (auth) | SignInScreen, SignUpScreen | Auth stack (React Navigation) | Supabase auth |
+| track | TrackHomeScreen | Tab shell + content switcher | tab state, nav callbacks |
+| workout | WorkoutTrackerScreen | Custom (View + ScrollView) | useProgramSchedule, useWorkoutTemplates, useUserStreaks |
+| profile | ProfileScreen | EnvironmentContainer + ScreenHeader + Section | ProfileContext |
+| shop (tab) | ShopHomeScreen | EnvironmentContainer + ScreenHeader | useShopProducts, CartContext |
+| chat (tab) | AiChatScreen | EnvironmentContainer + Section | ai-chat.service, useProfile |
+| community (tab) | CommunityScreen | EnvironmentContainer + Section | useCommunityFeed, useCommunityActions |
+| program | ProgramScreen | EnvironmentContainer + ScreenHeader + Section | useProgramSchedule |
+| program-create | CreateProgramScreen | EnvironmentContainer + Section | useCreateProgram, useWorkoutTemplates |
+| template-create | TemplateCreateScreen | EnvironmentContainer + Section | useWorkoutTemplates, template state |
+| template-session | TemplateSessionScreen | Custom layout | session state, Supabase sessions |
+| my-workouts | MyWorkoutsScreen | EnvironmentContainer + ScreenHeader + Section | useWorkoutTemplates |
+| workout-history | WorkoutHistoryScreen | EnvironmentContainer + Section | workout history hooks |
+| workout-insights | WorkoutInsightsScreen | EnvironmentContainer + Section | useTodayWorkoutForIntensity, muscle mappings |
+| cart | CartScreen | EnvironmentContainer + ScreenHeader | CartContext |
+| create-post | CreatePostScreen | EnvironmentContainer + ScreenHeader | useCreatePost, ProfileContext |
+| personal-info | PersonalInfoScreen | EnvironmentContainer + Section | ProfileContext |
+| onboarding | OnboardingScreen | Custom (steps) | ProfileContext, Supabase profiles |
+| activity-analytics | ActivityAnalyticsScreen | EnvironmentContainer + Section | analytics hooks |
+| exercises, exercise-detail, workout-session-detail, activity-type-workouts, add-exercises-for-session | ExercisesScreen, ExerciseDetailScreen, etc. | EnvironmentContainer + Section or custom | useExercises, useWorkoutSessionDetail, etc. |
+| preferences, integrations, help-support, achievements | PreferencesScreen, IntegrationsScreen, etc. | EnvironmentContainer + Section | ProfileContext / settings |
+
+---
+
+## Assets and images
+
+- **Local asset location**: Static images live under **`apps/mobile/assets/`**. In config, paths are relative to the app root (e.g. `./assets/hira-logo.png`); in code, from `src/` use `require('../../assets/...')`.
+- **app.json / Expo config**: [app.json](apps/mobile/app.json) references: **icon** and **splash.image** `./assets/hira-logo.png`; **android.adaptiveIcon.foregroundImage** `./assets/icon-adaptive-foreground.png`; **web.favicon** `./assets/hira-logo.png`. These drive app icon, splash, and web favicon; they are not imported in screen code.
+- **In-code local images**: Used via `require('../../assets/<file>')` from files under `src/`. Examples:
+  - [WorkoutTrackerScreen.tsx](apps/mobile/src/screens/WorkoutTrackerScreen.tsx): `ACTIVITY_TYPES` — `bodybuilding.jpg`, `calisthenics-woman.png`, `male-runner-in-action.jpg`, `stretch.jpg`, `yoga-female.png` for activity cards (`ImageBackground` / `Image` `source={item.source}`).
+  - [TrackHomeScreen.tsx](apps/mobile/src/screens/TrackHomeScreen.tsx): Hira tab `iconImage: require('../../assets/hira-icon.png')` in tab config; rendered by `TabItem`.
+  - [OverviewCards.tsx](apps/mobile/src/components/OverviewCards.tsx): Next workout card background — `require('../../assets/rest-day.png')` or `require('../../assets/man-working-out.png')` by state.
+  - [WelcomeSplashScreen.tsx](apps/mobile/src/screens/WelcomeSplashScreen.tsx): `source={require('../../assets/hira-logo.png')}` for splash logo.
+- **Remote images (URLs)**: Rendered with `<Image source={{ uri: someUrl }} />`. Used for: user avatars ([CreatePostScreen](apps/mobile/src/screens/CreatePostScreen.tsx) `profile.avatar_url`, [CommunityPostCard](apps/mobile/src/components/CommunityPostCard.tsx) `item.author_avatar_url`), shop product images ([ShopHomeScreen](apps/mobile/src/screens/ShopHomeScreen.tsx), [CartScreen](apps/mobile/src/screens/CartScreen.tsx) variant/product images), and community post media. URLs come from Supabase storage or API responses.
+- **Summary**: Local assets are bundled via `require()` from `apps/mobile/assets`; app-level assets are configured in `app.json`; user- and content-generated images use `source={{ uri }}` from API/Supabase.
+
+---
+
 ## Run from project root
 
 All commands are from repo root `hira-ai-app-capacitor` unless noted.
@@ -157,16 +198,18 @@ See **SETUP.md** for prerequisites (Node, Android Studio, Xcode, env vars) and *
 hira-ai-app-capacitor/
   apps/
     mobile/
-      app.json                 # Expo config (web.output: single)
+      app.json                 # Expo config (web.output: single, experiments.tsconfigPaths)
       capacitor.config.ts      # Capacitor appId, webDir
       package.json             # start, android, ios, web, cap:sync, cap:ios, cap:android
+      tsconfig.json            # baseUrl, paths "@/*": ["./src/*"]
       src/
+        features/              # Feature re-exports: ai/, shop/, community/, workout/
         components/            # OverviewCards, ScreenHeader, ActionCard, BottomTabBar,
                                # TabItem, CardGrid, EnvironmentContainer, PrimaryButton,
                                # Section, CommunityPostCard, MetricCard, RadialMetric, ...
-        context/               # CartContext, NutritionContext, ProfileContext
-        hooks/                 # useShopProducts, useNutrition, useWorkoutTemplates,
-                               # useFoodLibrarySearch, useExerciseSearch, useHabits,
+        context/               # CartContext, ProfileContext
+        hooks/                 # useShopProducts, useWorkoutTemplates,
+                               # useExerciseSearch,
                                # useUserStreaks, useUserXp (unused in UI), useCommunityFeed,
                                # useCommunityActions, useTodayWorkoutStats, ...
         lib/                   # supabase.ts, react-query.ts
@@ -202,9 +245,8 @@ hira-ai-app-capacitor/
 - **AI**: `ai_conversations`, `ai_messages`, `ai_memory_snapshots` (for Hira chat and context).
 - **Shop**: `shop_products`, `shop_variants`, `shop_categories`, `shop_cart_items`.
 - **Workouts**: `workout_programs`, `workout_program_days`, `workout_program_day_templates`, `workout_templates`, `workout_template_exercises`, `workout_template_sets`, `workout_sessions`, `workout_session_exercises`, `workout_session_sets`, `workout_program_completions`, `workout_program_adaptations`, `exercises`. Row Level Security (RLS) for per-user isolation of program/template/session data is applied via migrations under **`supabase/migrations/`** (project root).
-- **Nutrition**: `foods`, `meals`, `meal_items`, `nutrition_daily_summary`.
 - **Profile**: `profiles`, `user_health_profile`, `body_weight_logs`.
-- **Habits**: `user_habits`, `habit_completions` (with habit XP integration and triggers).
+- **Optional / future**: `daily_feelings` (migration in `supabase/migrations/20250218000000_daily_feelings.sql`). Nutrition and habit tables may exist in DB but are not used by the current app.
 - **Community**: `community_posts`, `community_feed_items`, `community_follows`, `community_blocks`, `community_post_likes`, `community_comments`, `community_feed_events`, `community_reports`, `community_user_interests`, `community_moderation_actions`; RLS and triggers for counts; `get_community_feed` RPC for cursor-paginated feed (for_you / following / trending).
 - **Gamification**: `user_xp`, `user_streaks`, leaderboards (migrations in **`supabase/migrations/`**). XP is not currently used in the mobile UI; streak is shown on the tracker home header only.
 
@@ -216,11 +258,8 @@ hira-ai-app-capacitor/
 - **Mobile run & build**: Expo `app.json` uses `web.output: "single"` so `npm start` works without expo-router. **Capacitor** added for native builds (`capacitor.config.ts`, `cap:sync`, `cap:android`, `cap:ios`); webDir is `dist`.
 - **PWA deploy**: Web build via `npm run build:web` → **dist/**; deploy to Vercel with root `apps/mobile` and `vercel.json` (SPA rewrites). Users install via Safari → Add to Home Screen. Optional `public/manifest.json` for standalone display and theme.
 - **Tracker home layout & UX**:
-  - Layout: Full-width **Move** card at top, full-width **Nourish** card below, then **Sleep** and **Routines** side-by-side (`CardGrid`). `NextWorkoutCard` and `NutritionCard` support optional `fullWidth`; `OverviewCards` has `cardFullWidth` style.
-  - **Nourish** card: Single line “X meals logged today”, green NOURISH title, white body text.
-  - **Routines** card: Title “ROUTINES”, icon-first list (check/circle + name truncated at 10 chars + "..."), footer “X of Y”. Violet accent; no global XP/streak dependency.
   - **Bottom nav**: Tab labels **Buy**, **Today**, **Hira**, **Connect**, **Profile**. Animated tab bar (Reanimated: icon jump, label/dot) with white active state. No cart icon on Today tab; streak badge only in header.
-  - **XP removed from UI**: No XP radial or rank on profile/shop; streak kept on tracker home. Hooks and invalidations for XP/streaks removed from track/profile/shop and from habits/nutrition/template-session/personal-info flows where they refreshed XP.
+  - **XP removed from UI**: No XP radial or rank on profile/shop; streak kept on tracker home.
   - **Profile**: Sign out button at bottom of Profile screen; calls `supabase.auth.signOut()`.
 - **Community Feed & Create Post**:
   - **CommunityScreen**: Tabs (For You, Following, Trending), full-width Create Post button below tabs, FlatList with `CommunityPostCard`, cursor pagination, pull-to-refresh, empty/error states. Like and Follow actions wired; optional Realtime invalidation for post counts.
@@ -231,32 +270,23 @@ hira-ai-app-capacitor/
   - Data pipeline: `exercise_muscle_mapping` table, `useExerciseMuscleMappings`, `useTodayWorkoutForIntensity`, and `ProfileContext` (activity level → fitness level).
   - Template/session detail: `WorkoutSessionDetailScreen` now includes a **Muscle intensity** section computed from that specific session’s exercises/sets, respecting the originating template.
 - **Today tab = Workout Tracker**:
-  - **Today** tab content is `WorkoutTrackerScreen` (Move card, Muscle intensity, My Workouts, marketplace). Tracker home (Move + Nourish + Sleep + Routines) is no longer shown on Today.
+  - **Today** tab content is `WorkoutTrackerScreen` (Move card, Muscle intensity, My Workouts, marketplace).
   - **Return-screen state**: `programReturnScreen`, `myWorkoutsReturnScreen`, `workoutInsightsReturnScreen` — back from Program, My Workouts, or Workout Insights returns to Today tab when opened from Today, or to standalone Workout Tracker when opened from there (in-app and Android hardware back).
   - **Move card (program CTA)**: "Create your own program" label; `hideSubtitle` and `hideCta` on `NextWorkoutCard` remove time icon, "High intensity" text, and Start button; tap navigates to Program.
 - **Onboarding**: Step 3 metrics — "metrics" text is white; height and weight are text inputs (no sliders), with cm/in and kg/lbs toggles; values committed on blur and submit, stored in cm/kg.
 - **Workout RLS**: Migration enables RLS on `workout_programs`, `workout_program_days`, `workout_program_day_templates`, `workout_program_adaptations`, `workout_program_completions`, `workout_templates`, `workout_template_exercises`, `workout_template_sets`, `workout_sessions`, `workout_session_exercises`, `workout_session_sets` so each user can only access their own data.
 - **Workout UX**: `MyWorkoutsScreen` header action **History**; `NextWorkoutCard` supports optional `hideSubtitle` and `hideCta` for simplified program CTA.
-- **Nutrition Date Switching & Per-day Views**:
-  - `NutritionDetailsScreen` header now has **date arrows + formatted date** so users can browse **previous / next days**.
-  - Nutrition data (meals, daily summary) is driven by a **date override** in `NutritionContext` (`selectedDateOverride` → `useMealsByType(date)`, `useDailySummary(date)`), staying in sync with Supabase.
-  - When viewing past days, logging is **read-only**: Add/Remove food actions are disabled and clearly marked.
-- **Nutrition Ring (Calorie Progress)**:
-  - Replaced the static yellow arc with a real **SVG-based circular progress** (`NutritionRing` + `react-native-svg`).
-  - Ring starts at the **top**, hits a full circle exactly at the calorie target, and shows an **outer overflow ring** when calories exceed target.
-- **Database & Security**:
-  - New migration `20250210100000_nutrition_date_user_sync.sql`:
-    - Index on `meals (user_id, consumed_at)` to keep per-day queries fast.
-    - Row Level Security + user-scoped policies for `meals`, `nutrition_daily_summary`, and `nutrition_goals` so nutrition data is always **per-user only**.
-  - Existing workout and habit migrations kept in sync with the documented schema in `database-schema.md`.
+- **Database**: Workout and community migrations in sync with schema; optional `daily_feelings` migration available (`20250218000000_daily_feelings.sql`).
 - **Create Program – Weekly schedule and day templates**:
   - Below periodisation: WEEKLY SCHEDULE with 7 day rows. Per day: select a workout from templates (modal) or leave unset. Selected workouts shown in a gradient pill; unset days show "Select workout." Tapping a day with a workout expands a dropdown with that workout's exercises (name left, sets/reps right, single line) and "Change workout"; tapping a day without a workout opens the Choose workout modal.
   - Data: `CreateProgramInput.day_assignments` (day_number 1–7 → template id); `useCreateProgram` inserts `workout_program_days` then `workout_program_day_templates` so all weeks get the same pattern.
 - **Profile screen**:
   - Content wrapped in `ScrollView` (flex: 1, contentContainerStyle paddingTop/paddingBottom) so the full profile (including Integrations, Sign out) scrolls. Root background set to solid black (`colors.bgMidnight`); `LinearGradient` background removed.
 
+**4-week restructuring completed**: AI chat v2 (usage limits, clear chat, suggestions, history), `features/` re-exports (ai, shop, community, workout), path alias `@/*`, 5-tab nav (Profile replaces Progress), CHANGELOG and PROJECT_SUMMARY updated. Optional: React.memo on list items, device testing, EAS/TestFlight build.
+
 **Upcoming Priorities**:
 1. **Checkout Flow**: Complete Shop payment integration.
 2. **Offline Mode**: Harden offline behavior in services and sync.
-3. **AI**: Optional conversation history load on chat open; voice/attach for Hira (future).
+3. **AI**: Optional cache for duplicate prompts; voice/attach for Hira (future).
 

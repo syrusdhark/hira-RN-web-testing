@@ -8,7 +8,7 @@ import { ShopHomeScreen } from './ShopHomeScreen';
 import { AiChatScreen } from './AiChatScreen';
 import { CommunityScreen } from './CommunityScreen';
 import { WorkoutTrackerScreen } from './WorkoutTrackerScreen';
-import { WorkoutInsightsScreen } from './WorkoutInsightsScreen';
+import { ProfileScreen } from './ProfileScreen';
 import type { StartProgramDayPayload } from './ProgramScreen';
 
 const TRACK_TABS: TabConfig[] = [
@@ -16,7 +16,7 @@ const TRACK_TABS: TabConfig[] = [
   { key: 'track', label: 'Today', icon: 'lightning-bolt', activeColor: colors.textPrimary },
   { key: 'chat', label: 'Hira', icon: 'chat-processing-outline', iconImage: require('../../assets/hira-icon.png'), activeColor: colors.textPrimary },
   { key: 'community', label: 'Connect', icon: 'account-group-outline', activeColor: colors.textPrimary },
-  { key: 'progress', label: 'Progress', icon: 'chart-line', activeColor: colors.textPrimary },
+  { key: 'profile', label: 'Profile', icon: 'account-outline', activeColor: colors.textPrimary },
 ];
 
 export function TrackHomeScreen({
@@ -80,7 +80,7 @@ export function TrackHomeScreen({
       default:
         return (
           <WorkoutTrackerScreen
-            navigation={{ goBack: () => { } }}
+            navigation={{ goBack: () => {} }}
             onNavigateToProgram={onNavigateToProgram}
             onNavigateToTemplateCreate={onNavigateToTemplateCreate}
             onNavigateToMyWorkouts={onNavigateToMyWorkouts}
@@ -100,8 +100,18 @@ export function TrackHomeScreen({
             onNavigateToWorkout={onNavigateToWorkout}
           />
         );
-      case 'progress':
-        return <WorkoutInsightsScreen navigation={{ goBack: () => { } }} />;
+      case 'profile':
+        return (
+          <ProfileScreen
+            navigation={{ goBack: () => {} }}
+            onPersonalInfo={onNavigateToPersonalInfo}
+            onPreferences={onNavigateToPreferences}
+            onIntegrations={onNavigateToIntegrations}
+            onHelpSupport={onNavigateToHelpSupport}
+            onViewAllAchievements={onNavigateToAchievements}
+            onSignOut={onSignOut}
+          />
+        );
       case 'community':
         return <CommunityScreen onNavigateToCreatePost={onNavigateToCreatePost} />;
     }
@@ -109,8 +119,8 @@ export function TrackHomeScreen({
 
   return (
     <EnvironmentContainer
-      noPadding={activeTab === 'shop' || activeTab === 'track' || activeTab === 'progress' || activeTab === 'community'}
-      disableScroll={activeTab === 'shop' || activeTab === 'track' || activeTab === 'chat' || activeTab === 'community'}
+      noPadding={activeTab === 'shop' || activeTab === 'track' || activeTab === 'profile' || activeTab === 'community'}
+      disableScroll={activeTab === 'shop' || activeTab === 'track' || activeTab === 'chat' || activeTab === 'community' || activeTab === 'profile'}
       footer={<BottomTabBar tabs={TRACK_TABS} activeTab={activeTab} onTabPress={handleTabPress} />}
     >
       {renderContent()}

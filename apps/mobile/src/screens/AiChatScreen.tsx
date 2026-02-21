@@ -12,7 +12,15 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useProfile } from '../context/ProfileContext';
-import { createConversation, sendChatMessage, shouldUseLocalAi } from '../services/ai-chat.service';
+import {
+  createConversation,
+  sendMessage,
+  getUserUsage,
+  clearConversation,
+  getConversationHistory,
+  shouldUseLocalAi,
+  DAILY_LIMIT_REACHED,
+} from '../services/ai';
 import * as LocalAi from '../services/ai/local-ai.service';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { colors, radius, space, typography } from '../theme';
@@ -36,7 +44,40 @@ type QuickAction = {
     | { onPress: (nav: Record<string, any>) => void; sendMessage?: never }
   );
 
-const QUICK_ACTIONS: QuickAction[] = [];
+const QUICK_ACTIONS: QuickAction[] = [
+  {
+    id: 'workout-today',
+    label: 'Should I workout today?',
+    icon: 'dumbbell',
+    iconColor: '#A78BFA',
+    gradientColors: ['#1e1b4b', '#312e81'],
+    sendMessage: 'Should I workout today?',
+  },
+  {
+    id: 'progress',
+    label: 'How am I progressing?',
+    icon: 'chart-line',
+    iconColor: '#34D399',
+    gradientColors: ['#064e3b', '#065f46'],
+    sendMessage: 'How am I progressing?',
+  },
+  {
+    id: 'recovery',
+    label: 'Tips for recovery',
+    icon: 'bed',
+    iconColor: '#60A5FA',
+    gradientColors: ['#1e3a5f', '#1e40af'],
+    sendMessage: 'What are some tips for recovery?',
+  },
+  {
+    id: 'motivation',
+    label: 'I need motivation',
+    icon: 'fire',
+    iconColor: '#FBBF24',
+    gradientColors: ['#78350f', '#92400e'],
+    sendMessage: 'I need some motivation to stay consistent.',
+  },
+];
 
 export function AiChatScreen({
   onNavigateToWorkout,
@@ -52,20 +93,21 @@ export function AiChatScreen({
   const [conversationReady, setConversationReady] = useState(false);
   const [isOllamaReady, setIsOllamaReady] = useState<boolean | null>(null);
   const [isWarming, setIsWarming] = useState(false);
+  const [usage, setUsage] = useState<{ tokensUsed: number; limit: number; limitReached: boolean } | null>(null);
 
   const nav = { onNavigateToWorkout };
 
+  const refreshUsage = useCallback(async () => {
+    if (!userId) return;
+    const u = await getUserUsage(userId);
+    setUsage({ tokensUsed: u.tokensUsed, limit: u.limit, limitReached: u.limitReached });
+  }, [userId]);
+
   const checkOllama = useCallback(async () => {
     const useLocal = shouldUseLocalAi();
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/cd660e56-307d-4b97-a0b1-1e6647da9f0c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AiChatScreen.tsx:checkOllama',message:'checkOllama',data:{useLocal},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
-    // #endregion
     if (!useLocal) return;
     setIsOllamaReady(null);
     const available = await LocalAi.isAvailable();
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/cd660e56-307d-4b97-a0b1-1e6647da9f0c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AiChatScreen.tsx:checkOllama',message:'after isAvailable',data:{available},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
-    // #endregion
     setIsOllamaReady(available);
     if (available) {
       setIsWarming(true);
@@ -91,6 +133,8 @@ export function AiChatScreen({
         if (!cancelled) {
           setConversationId(id);
           setConversationReady(true);
+          const history = await getConversationHistory(id);
+          if (!cancelled) setMessages(history);
         }
       } catch (e) {
         if (!cancelled) {
@@ -104,10 +148,19 @@ export function AiChatScreen({
     };
   }, [userId]);
 
-  const sendMessage = useCallback(
+  useEffect(() => {
+    if (!userId || !conversationReady) return;
+    refreshUsage();
+  }, [userId, conversationReady, refreshUsage]);
+
+  const sendMessageHandler = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
-      if (!trimmed || !userId || !conversationId || sending) return;
+      if (!trimmed || !userId || sending) return;
+      if (usage?.limitReached) {
+        setError("You've reached your daily limit. Try again tomorrow.");
+        return;
+      }
 
       setError(null);
       setInputText('');
@@ -115,38 +168,58 @@ export function AiChatScreen({
       setSending(true);
 
       try {
-        const reply = await sendChatMessage(userId, conversationId, trimmed);
+        const { reply, conversationId: cid } = await sendMessage(userId, trimmed, conversationId);
+        if (cid !== conversationId) setConversationId(cid);
         setMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
+        refreshUsage();
       } catch (e) {
-        const message = e instanceof Error ? e.message : 'Something went wrong. Please try again.';
+        const err = e as Error & { code?: string };
+        const message =
+          err.code === DAILY_LIMIT_REACHED
+            ? err.message
+            : err instanceof Error
+              ? err.message
+              : 'Something went wrong. Please try again.';
         setError(message);
         setMessages((prev) => prev.slice(0, -1));
+        refreshUsage();
       } finally {
         setSending(false);
       }
     },
-    [userId, conversationId, sending]
+    [userId, conversationId, sending, usage?.limitReached, refreshUsage]
   );
 
   const handleSend = useCallback(() => {
-    sendMessage(inputText);
-  }, [inputText, sendMessage]);
+    sendMessageHandler(inputText);
+  }, [inputText, sendMessageHandler]);
 
   const handleQuickAction = useCallback(
     (action: (typeof QUICK_ACTIONS)[number]) => {
       if ('sendMessage' in action && typeof action.sendMessage === 'string') {
-        sendMessage(action.sendMessage);
+        sendMessageHandler(action.sendMessage);
         return;
       }
       if ('onPress' in action && action.onPress) {
         action.onPress(nav);
       }
     },
-    [sendMessage, nav]
+    [sendMessageHandler, nav]
   );
 
+  const handleClearChat = useCallback(async () => {
+    if (!conversationId) return;
+    setError(null);
+    try {
+      await clearConversation(conversationId);
+      setMessages([]);
+    } catch {
+      setError('Failed to clear chat.');
+    }
+  }, [conversationId]);
+
   const leftElement = (
-    <Pressable style={styles.menuButton} onPress={() => { }} accessibilityLabel="Menu">
+    <Pressable style={styles.menuButton} onPress={() => {}} accessibilityLabel="Menu">
       <MaterialCommunityIcons name="menu" size={24} color={colors.textPrimary} />
     </Pressable>
   );
@@ -207,7 +280,21 @@ export function AiChatScreen({
 
   return (
     <View style={styles.root}>
-      <ScreenHeader leftElement={leftElement} />
+      <ScreenHeader
+        leftElement={leftElement}
+        rightBadges={
+          usage && usage.limit > 0
+            ? [
+                {
+                  value: usage.limitReached
+                    ? 'Limit reached'
+                    : `${usage.tokensUsed.toLocaleString()} / ${usage.limit.toLocaleString()}`,
+                  accent: usage.limitReached ? 'amber' : 'violet',
+                },
+              ]
+            : undefined
+        }
+      />
 
       <KeyboardAvoidingView
         style={styles.flex}
@@ -274,12 +361,20 @@ export function AiChatScreen({
               ))}
               {sending && (
                 <View style={[styles.bubbleWrap, styles.bubbleAssistant]}>
-                  <View style={[styles.bubble, styles.bubbleAssistantBg]}>
+                  <View style={[styles.bubble, styles.bubbleAssistantBg, styles.thinkingBubble]}>
                     <ActivityIndicator size="small" color={colors.primaryViolet} />
+                    <Text style={styles.thinkingText}>Hira is thinking…</Text>
                   </View>
                 </View>
               )}
             </View>
+          )}
+
+          {messages.length > 0 && conversationReady && (
+            <Pressable style={styles.clearChatWrap} onPress={handleClearChat}>
+              <MaterialCommunityIcons name="broom" size={18} color={colors.textTertiary} />
+              <Text style={styles.clearChatText}>Clear chat</Text>
+            </Pressable>
           )}
 
           {error ? (
@@ -307,9 +402,12 @@ export function AiChatScreen({
             <MaterialCommunityIcons name="microphone-outline" size={22} color={colors.textPrimary} />
           </Pressable>
           <Pressable
-            style={[styles.sendBtn, (sending || !inputText.trim()) && styles.sendBtnDisabled]}
+            style={[
+              styles.sendBtn,
+              (sending || !inputText.trim() || usage?.limitReached) && styles.sendBtnDisabled,
+            ]}
             onPress={() => handleSend()}
-            disabled={sending || !inputText.trim()}
+            disabled={sending || !inputText.trim() || !!usage?.limitReached}
             accessibilityLabel="Send"
           >
             <MaterialCommunityIcons name="arrow-up" size={24} color={colors.textPrimary} />
@@ -420,9 +518,30 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderSubtle,
   },
+  thinkingBubble: {
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  thinkingText: {
+    ...typography.sm,
+    color: colors.textTertiary,
+    marginTop: space.xs,
+  },
   bubbleText: {
     ...typography.base,
     color: colors.textPrimary,
+  },
+  clearChatWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: space.xs,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.xs,
+  },
+  clearChatText: {
+    ...typography.sm,
+    color: colors.textTertiary,
   },
   errorWrap: {
     paddingVertical: space.sm,
