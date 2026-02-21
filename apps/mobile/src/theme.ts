@@ -22,6 +22,9 @@ export const colors = {
   bgMidnight: '#000000',
   bgCharcoal: '#0C0D0E',
   bgElevated: '#141517',
+  /** Gradient background: top (subtle violet-tinted) to bottom (black). */
+  bgGradientTop: '#0F0C18',
+  bgGradientBottom: '#000000',
   borderSubtle: '#1A1B1E',
   borderDefault: '#26272B',
   primaryViolet: '#8A70FF',

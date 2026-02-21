@@ -1,5 +1,6 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, space } from '../theme';
 import { TAB_BAR_ROW_HEIGHT } from '../constants/layout';
@@ -38,7 +39,10 @@ export function EnvironmentContainer({
   };
 
   return (
-    <View style={styles.root}>
+    <LinearGradient
+      colors={[colors.bgGradientTop, colors.bgGradientBottom]}
+      style={styles.root}
+    >
       <Container
         style={containerStyle}
         {...containerProps}
@@ -50,12 +54,12 @@ export function EnvironmentContainer({
           {footer}
         </View>
       )}
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bgMidnight },
+  root: { flex: 1 },
   scroll: { flex: 1 },
   content: {
     paddingHorizontal: space.md,
