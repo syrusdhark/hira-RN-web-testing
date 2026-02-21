@@ -1,14 +1,16 @@
 # Hira-AI — Project Summary
 
+**Project root**: `hira-ai-app-capacitor` (this repo).
+
 ## Purpose
 
 **Hira-AI** is a monorepo for a comprehensive health-tracking and AI coaching product.
 
-- **Mobile app**: React Native + Expo (TypeScript).
-- **Backend**: NestJS (currently scaffold).
+- **Mobile app**: React Native + Expo + Capacitor (TypeScript).
+- **Backend**: NestJS (scaffold).
 - **Database/Auth**: Supabase (PostgreSQL + Auth).
 
-The project is a high-performance, design-system–driven mobile application focused on tracking workouts, nutrition, and sleep, with an integrated AI wellness coach (Hira) and marketplace.
+The project is a design-system–driven mobile application focused on tracking workouts, nutrition, and sleep, with an integrated AI wellness coach (Hira) and marketplace.
 
 ---
 
@@ -17,7 +19,8 @@ The project is a high-performance, design-system–driven mobile application foc
 ### Mobile (`apps/mobile`)
 
 **Status**: Active Development  
-**Tech Stack**: React Native, Expo, TypeScript, TanStack Query, Supabase Client, design tokens (`theme.ts`: colors, space, typography, radius), expo-linear-gradient.
+**Tech Stack**: React Native, Expo (~54), Capacitor (7), TypeScript, TanStack Query, Supabase Client, design tokens (`src/theme.ts`: colors, space, typography, radius), expo-linear-gradient.  
+**Native builds**: Capacitor config at `apps/mobile/capacitor.config.ts` (appId `com.anonymous.hiraai`, webDir `dist`). Use `npm run cap:sync` then `npm run cap:android` / `npm run cap:ios` for native runs after building.
 
 **Today tab**: The **Today** tab content is the **Workout Tracker** screen (`WorkoutTrackerScreen`) embedded in `TrackHomeScreen` — Move card (program CTA), Muscle intensity, My Workouts, marketplace. The old tracker-home layout (Move + Nourish + Sleep + Routines cards) is no longer shown on Today; other tabs (Buy, Hira, Connect, Profile) are unchanged. Back from Program, My Workouts, or Workout Insights (Muscle intensity) returns to the same origin (Today tab or standalone Workout screen) via `programReturnScreen`, `myWorkoutsReturnScreen`, and `workoutInsightsReturnScreen` in `App.tsx` (in-app and hardware back).
 
@@ -86,7 +89,7 @@ The project is a high-performance, design-system–driven mobile application foc
 ### Backend (`apps/backend`)
 
 **Status**: Scaffold / Early Stage  
-**Tech Stack**: NestJS.  
+**Tech Stack**: NestJS 11.  
 - Basic structure present. Mobile uses Supabase directly for most operations (offline-first, latency).
 
 ---
@@ -95,7 +98,7 @@ The project is a high-performance, design-system–driven mobile application foc
 
 ```mermaid
 graph TD
-    User((User)) --> MobileApp[Mobile App Expo/RN]
+    User((User)) --> MobileApp[Mobile App Expo/RN + Capacitor]
 
     subgraph MobileApp
         Nav[Navigation Controller]
@@ -128,44 +131,66 @@ graph TD
 
 ---
 
-## Folder Structure (Key Files)
+## Run from project root
+
+All commands are from repo root `hira-ai-app-capacitor` unless noted.
+
+| Goal | Command |
+|------|--------|
+| Install mobile deps | `cd apps/mobile && npm install` |
+| Start Expo dev server | `cd apps/mobile && npm start` (Metro at http://localhost:8081) |
+| Web | From Expo terminal press `w`, or `cd apps/mobile && npm run web` |
+| Android | `cd apps/mobile && npm run android` |
+| iOS | `cd apps/mobile && npm run ios` |
+| Capacitor sync | `cd apps/mobile && npm run cap:sync` |
+| Capacitor Android/iOS | `cd apps/mobile && npm run cap:android` / `cap:ios` |
+| Backend dev | `cd apps/backend && npm install && npm run start:dev` |
+| PWA deploy | `cd apps/mobile && npm run build:web` → deploy **dist/** to Vercel (root `apps/mobile`). See SETUP.md. |
+
+See **SETUP.md** for prerequisites (Node, Android Studio, Xcode, env vars) and **Deploy as PWA (Vercel)**.
+
+---
+
+## Folder structure (key paths, relative to project root)
 
 ```
-hira-ai/
+hira-ai-app-capacitor/
   apps/
     mobile/
+      app.json                 # Expo config (web.output: single)
+      capacitor.config.ts      # Capacitor appId, webDir
+      package.json             # start, android, ios, web, cap:sync, cap:ios, cap:android
       src/
-        components/
-          OverviewCards.tsx, ScreenHeader.tsx, ActionCard.tsx,
-          BottomTabBar.tsx, TabItem.tsx, CardGrid.tsx, EnvironmentContainer.tsx,
-          PrimaryButton.tsx, Section.tsx, CommunityPostCard.tsx, ...
-        context/
-          CartContext.tsx, NutritionContext.tsx, ProfileContext.tsx
-        hooks/
-          useShopProducts.ts, useNutrition.ts, useWorkoutTemplates.ts,
-          useFoodLibrarySearch.ts, useExerciseSearch.ts, useHabits.ts,
-          useUserStreaks.ts, useUserXp.ts (unused in UI), useCommunityFeed.ts,
-          useCommunityActions.ts, useTodayWorkoutStats.ts, useTodaySteps.ts, ...
-        lib/
-          supabase.ts, react-query.ts
-        screens/
-          AuthScreen.tsx, OnboardingScreen.tsx,
-          TrackHomeScreen.tsx, AiChatScreen.tsx,
-          WorkoutTrackerScreen.tsx, TemplateCreateScreen.tsx,
-          TemplateSessionScreen.tsx, MyWorkoutsScreen.tsx,
-          ExerciseSearchScreen.tsx, ProgramScreen.tsx,
-          ActivityAnalyticsScreen.tsx,
-          NutritionDetailsScreen.tsx, FoodSearchScreen.tsx, AddMealScreen.tsx,
-          SleepTrackerScreen.tsx, HabitTrackerScreen.tsx, CreateHabitScreen.tsx,
-          EditHabitScreen.tsx, ShopHomeScreen.tsx, CartScreen.tsx,
-          ProfileScreen.tsx, PersonalInfoScreen.tsx, CommunityScreen.tsx,
-          CreatePostScreen.tsx, HealthDataTestScreen.tsx, ...
-        services/
-          ai-chat.service.ts, ai-context.service.ts,
-          HealthService.ts, HealthNormalizer.ts, ...
+        components/            # OverviewCards, ScreenHeader, ActionCard, BottomTabBar,
+                               # TabItem, CardGrid, EnvironmentContainer, PrimaryButton,
+                               # Section, CommunityPostCard, MetricCard, RadialMetric, ...
+        context/               # CartContext, NutritionContext, ProfileContext
+        hooks/                 # useShopProducts, useNutrition, useWorkoutTemplates,
+                               # useFoodLibrarySearch, useExerciseSearch, useHabits,
+                               # useUserStreaks, useUserXp (unused in UI), useCommunityFeed,
+                               # useCommunityActions, useTodayWorkoutStats, ...
+        lib/                   # supabase.ts, react-query.ts
+        screens/               # AuthScreen, OnboardingScreen, TrackHomeScreen, AiChatScreen,
+                               # WorkoutTrackerScreen, TemplateCreateScreen, TemplateSessionScreen,
+                               # MyWorkoutsScreen, ExerciseSearchScreen, ProgramScreen,
+                               # CreateProgramScreen, ActivityAnalyticsScreen, WorkoutInsightsScreen,
+                               # WorkoutHistoryScreen, WorkoutSessionDetailScreen, ShopHomeScreen,
+                               # CartScreen, ProfileScreen, PersonalInfoScreen, CommunityScreen,
+                               # CreatePostScreen, ActivityTypeWorkoutsScreen, ExercisesScreen, ...
+        services/              # ai-chat.service.ts, ai-context.service.ts,
+                               # HealthService.ts, HealthNormalizer.ts, ...
         theme.ts
         App.tsx
-    backend/
+    backend/                   # NestJS 11 scaffold
+      package.json
+  docs/                        # ai-chat-local-e2e, template-editing-feature, workout-tracker, ...
+  supabase/
+    migrations/                # SQL migrations (e.g. ai_usage_logs, community, RLS, ...)
+  DESIGN-SYSTEM.md
+  SETUP.md
+  TROUBLESHOOTING.md
+  database-schema.md
+  PROJECT_SUMMARY.md           # this file
 ```
 
 ---
@@ -176,18 +201,20 @@ hira-ai/
 - `auth.users`: Supabase Auth.
 - **AI**: `ai_conversations`, `ai_messages`, `ai_memory_snapshots` (for Hira chat and context).
 - **Shop**: `shop_products`, `shop_variants`, `shop_categories`, `shop_cart_items`.
-- **Workouts**: `workout_programs`, `workout_program_days`, `workout_program_day_templates`, `workout_templates`, `workout_template_exercises`, `workout_template_sets`, `workout_sessions`, `workout_session_exercises`, `workout_session_sets`, `workout_program_completions`, `workout_program_adaptations`, `exercises`. Row Level Security (RLS) for per-user isolation of program/template/session data is applied via migrations under `supabase/migrations/` (e.g. `20250213000000_enable_rls_workout_programs.sql`).
+- **Workouts**: `workout_programs`, `workout_program_days`, `workout_program_day_templates`, `workout_templates`, `workout_template_exercises`, `workout_template_sets`, `workout_sessions`, `workout_session_exercises`, `workout_session_sets`, `workout_program_completions`, `workout_program_adaptations`, `exercises`. Row Level Security (RLS) for per-user isolation of program/template/session data is applied via migrations under **`supabase/migrations/`** (project root).
 - **Nutrition**: `foods`, `meals`, `meal_items`, `nutrition_daily_summary`.
 - **Profile**: `profiles`, `user_health_profile`, `body_weight_logs`.
 - **Habits**: `user_habits`, `habit_completions` (with habit XP integration and triggers).
 - **Community**: `community_posts`, `community_feed_items`, `community_follows`, `community_blocks`, `community_post_likes`, `community_comments`, `community_feed_events`, `community_reports`, `community_user_interests`, `community_moderation_actions`; RLS and triggers for counts; `get_community_feed` RPC for cursor-paginated feed (for_you / following / trending).
-- **Gamification**: `user_xp`, `user_streaks`, leaderboards (migrations in `supabase/migrations/`). XP is not currently used in the mobile UI; streak is shown on the tracker home header only.
+- **Gamification**: `user_xp`, `user_streaks`, leaderboards (migrations in **`supabase/migrations/`**). XP is not currently used in the mobile UI; streak is shown on the tracker home header only.
 
 ---
 
 ## Recent Updates & Next Steps
 
 **Recent Achievements**:
+- **Mobile run & build**: Expo `app.json` uses `web.output: "single"` so `npm start` works without expo-router. **Capacitor** added for native builds (`capacitor.config.ts`, `cap:sync`, `cap:android`, `cap:ios`); webDir is `dist`.
+- **PWA deploy**: Web build via `npm run build:web` → **dist/**; deploy to Vercel with root `apps/mobile` and `vercel.json` (SPA rewrites). Users install via Safari → Add to Home Screen. Optional `public/manifest.json` for standalone display and theme.
 - **Tracker home layout & UX**:
   - Layout: Full-width **Move** card at top, full-width **Nourish** card below, then **Sleep** and **Routines** side-by-side (`CardGrid`). `NextWorkoutCard` and `NutritionCard` support optional `fullWidth`; `OverviewCards` has `cardFullWidth` style.
   - **Nourish** card: Single line “X meals logged today”, green NOURISH title, white body text.

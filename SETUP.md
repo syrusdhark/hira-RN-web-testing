@@ -12,9 +12,10 @@ Welcome to the **Hira-AI** project! This guide will help you set up your develop
 4. [Environment Configuration](#environment-configuration)
 5. [Running the App](#running-the-app)
 6. [Development Workflow](#development-workflow)
-7. [Troubleshooting](#troubleshooting)
-8. [Project Structure](#project-structure)
-9. [Additional Resources](#additional-resources)
+7. [Deploy as PWA (Vercel)](#deploy-as-pwa-vercel)
+8. [Troubleshooting](#troubleshooting)
+9. [Project Structure](#project-structure)
+10. [Additional Resources](#additional-resources)
 
 ---
 
@@ -334,6 +335,41 @@ theme.radius.lg
 ```
 
 See `DESIGN-SYSTEM.md` for complete documentation.
+
+---
+
+## Deploy as PWA (Vercel)
+
+You can ship the app as a **web app (PWA)** so users install it via **Add to Home Screen** in Safari (no App Store, no signing).
+
+### Build the web version
+
+From the **apps/mobile** directory:
+
+```bash
+cd apps/mobile
+npx expo export --platform web
+```
+
+This produces the **dist/** folder (full web app).
+
+### Deploy to Vercel
+
+1. Push the repo to GitHub.
+2. In [Vercel](https://vercel.com): **Add New Project** → Import the repo.
+3. Set **Root Directory** to **`apps/mobile`**.
+4. **Build Command**: `npx expo export --platform web`
+5. **Output Directory**: `dist`
+6. Add any **Environment Variables** (e.g. `EXPO_PUBLIC_*` for Supabase or API keys) in Project Settings.
+7. Deploy.
+
+The repo includes **apps/mobile/vercel.json** so all routes serve `index.html` (SPA routing).
+
+### Install on iPhone
+
+1. Open the deployed URL in **Safari**.
+2. Tap **Share** → **Add to Home Screen** → **Add**.
+3. The app appears as an icon and opens fullscreen (no browser UI when configured).
 
 ---
 
