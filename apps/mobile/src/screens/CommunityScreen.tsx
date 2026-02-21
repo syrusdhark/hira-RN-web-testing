@@ -16,6 +16,7 @@ import { useCommunityFeedFlatItems, useCommunityPostRealtime } from '../hooks/us
 import { useLikePost, useFollowAuthor } from '../hooks/useCommunityActions';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius, space, typography } from '../theme';
+import { TAB_BAR_ROW_HEIGHT } from '../constants/layout';
 import type { FeedTab } from '../types/community';
 import type { CommunityFeedItem } from '../types/community';
 
@@ -24,9 +25,6 @@ const TABS: { key: FeedTab; label: string }[] = [
   { key: 'following', label: 'Following' },
   { key: 'trending', label: 'Trending' },
 ];
-
-/** Match EnvironmentContainer reserved footer space so list content clears the tab bar. */
-const FOOTER_RESERVED_HEIGHT = 110;
 
 export function CommunityScreen({
   onNavigateToCreatePost,
@@ -49,7 +47,7 @@ export function CommunityScreen({
   const likePost = useLikePost();
   const followAuthor = useFollowAuthor();
   useCommunityPostRealtime();
-  const listPaddingBottom = FOOTER_RESERVED_HEIGHT + insets.bottom;
+  const listPaddingBottom = TAB_BAR_ROW_HEIGHT + insets.bottom;
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();

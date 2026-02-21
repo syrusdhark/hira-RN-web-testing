@@ -1,6 +1,8 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, space } from '../theme';
+import { TAB_BAR_ROW_HEIGHT } from '../constants/layout';
 
 export function EnvironmentContainer({
   children,
@@ -13,9 +15,23 @@ export function EnvironmentContainer({
   noPadding?: boolean;
   disableScroll?: boolean;
 }) {
+  const insets = useSafeAreaInsets();
+  const contentBottomPadding = footer != null
+    ? insets.bottom + TAB_BAR_ROW_HEIGHT
+    : 110;
+
   const Container = disableScroll ? View : ScrollView;
-  const containerStyle = [styles.scroll, disableScroll && styles.content, disableScroll && noPadding && styles.contentNoPadding];
-  const contentStyle = [styles.content, noPadding && styles.contentNoPadding];
+  const containerStyle = [
+    styles.scroll,
+    disableScroll && styles.content,
+    disableScroll && noPadding && styles.contentNoPadding,
+    disableScroll && footer != null && { paddingBottom: contentBottomPadding },
+  ];
+  const contentStyle = [
+    styles.content,
+    noPadding && styles.contentNoPadding,
+    { paddingBottom: contentBottomPadding },
+  ];
   const containerProps = disableScroll ? {} : {
     showsVerticalScrollIndicator: false,
     contentContainerStyle: contentStyle
@@ -42,8 +58,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgMidnight },
   scroll: { flex: 1 },
   content: {
-    paddingBottom: 110,
-    paddingHorizontal: space.md, // Restored global padding for consistency
+    paddingHorizontal: space.md,
   },
   contentNoPadding: {
     paddingHorizontal: 0,

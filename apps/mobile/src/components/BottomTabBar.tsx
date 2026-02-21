@@ -1,7 +1,9 @@
 import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, space } from '../theme';
+import { TAB_BAR_ROW_HEIGHT } from '../constants/layout';
 import { TabItem } from './TabItem';
 
 export type TabConfig = {
@@ -19,9 +21,18 @@ type BottomTabBarProps = {
 };
 
 export function BottomTabBar({ tabs, activeTab, onTabPress }: BottomTabBarProps) {
-  const bottomInset = Platform.OS === 'ios' ? 34 : space.md;
+  const insets = useSafeAreaInsets();
+  const bottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 8 : 0);
   return (
-    <View style={[styles.root, { paddingBottom: bottomInset }]}>
+    <View
+      style={[
+        styles.root,
+        {
+          paddingBottom: bottomPadding,
+          minHeight: TAB_BAR_ROW_HEIGHT + bottomPadding,
+        },
+      ]}
+    >
       {tabs.map((tab) => (
         <TabItem
           key={tab.key}
