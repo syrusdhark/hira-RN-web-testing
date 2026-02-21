@@ -1,0 +1,10 @@
+{
+    "name": "hira-ai-monorepo",
+    "private": true,
+    "workspaces": [
+        "apps/*"
+    ],
+    "scripts": {
+        "build:mobile": "cd apps/mobile && npm install && npm run build:web"
+    }
+}
