@@ -385,7 +385,7 @@ export function AiChatScreen({
         </ScrollView>
 
         <View style={styles.inputRow}>
-          <Pressable style={styles.inputIconBtn} onPress={() => { }} accessibilityLabel="Attach">
+          <Pressable style={styles.inputIconBtn} onPress={() => {}} accessibilityLabel="Attach">
             <MaterialCommunityIcons name="plus" size={22} color={colors.textPrimary} />
           </Pressable>
           <TextInput
@@ -398,7 +398,7 @@ export function AiChatScreen({
             multiline={false}
             maxLength={2000}
           />
-          <Pressable style={styles.inputIconBtn} onPress={() => { }} accessibilityLabel="Voice input">
+          <Pressable style={styles.inputIconBtn} onPress={() => {}} accessibilityLabel="Voice input">
             <MaterialCommunityIcons name="microphone-outline" size={22} color={colors.textPrimary} />
           </Pressable>
           <Pressable

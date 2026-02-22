@@ -105,8 +105,6 @@ export default function App() {
     setScreenStack([screen]);
   }, []);
 
-
-  // Exercise Search State
   const [exerciseSearchVisible, setExerciseSearchVisible] = useState(false);
   const [onExerciseSelected, setOnExerciseSelected] = useState<((exercise: any) => void) | undefined>();
 
@@ -171,10 +169,6 @@ export default function App() {
     const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => sub.remove();
   }, [session, screenStack.length, goBack]);
-
-  // Debug: Log sessionTemplateId changes
-  useEffect(() => {
-  }, [sessionTemplateId]);
 
   if (hasSeenWelcomeSplash === null) {
     return (

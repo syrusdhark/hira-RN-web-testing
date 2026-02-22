@@ -2,6 +2,12 @@
   "plugins": {
     "cursor-team-kit": {
       "enabled": true
+    },
+    "figma": {
+      "enabled": true
+    },
+    "compound-engineering": {
+      "enabled": true
     }
   }
 }

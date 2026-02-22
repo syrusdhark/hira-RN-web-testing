@@ -22,14 +22,24 @@ type BottomTabBarProps = {
 
 export function BottomTabBar({ tabs, activeTab, onTabPress }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-  const bottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 8 : 0);
+
+  // Base padding for the tab item content area (applies on all platforms)
+  const BASE_BOTTOM_PADDING = Platform.OS === 'android' ? 8 : 10;
+
+  // Extra padding added only when the device has a home indicator / gesture bar
+  // (e.g. iPhone Face ID models, Android gesture-nav devices).
+  // insets.bottom will be > 0 on those devices; we add it on top of the base.
+  const safeAreaExtra = insets.bottom > 0 ? insets.bottom : 0;
+
+  const containerBottomPadding = BASE_BOTTOM_PADDING + safeAreaExtra;
+
   return (
     <View
       style={[
         styles.root,
         {
-          paddingBottom: bottomPadding,
-          minHeight: TAB_BAR_ROW_HEIGHT + bottomPadding,
+          paddingBottom: containerBottomPadding,
+          minHeight: TAB_BAR_ROW_HEIGHT + containerBottomPadding,
         },
       ]}
     >

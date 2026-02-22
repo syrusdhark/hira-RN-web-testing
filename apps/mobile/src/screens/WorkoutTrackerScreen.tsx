@@ -12,7 +12,6 @@ import {
   ImageBackground,
 } from 'react-native';
 
-import { supabase } from '../lib/supabase';
 import { useWorkoutTemplates } from '../hooks/useWorkoutTemplates';
 import { useExercises } from '../hooks/useExerciseSearch';
 import { useProgramSchedule } from '../hooks/useProgramSchedule';
@@ -61,7 +60,6 @@ export function WorkoutTrackerScreen({
   showBackButton = true,
 }: WorkoutTrackerScreenProps) {
   const paddingTop = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) + 16 : 56;
-  const cardWidth = Dimensions.get('window').width * 0.45;
   const activityTypeCardWidth = Dimensions.get('window').width * 0.40;
   const activityTypeCardHeight = 140;
   const { data: streaks = [], isLoading: streaksLoading } = useUserStreaks();
@@ -72,8 +70,7 @@ export function WorkoutTrackerScreen({
     ? scheduleData.program.title
     : 'Create your own program';
   const { data, isLoading } = useWorkoutTemplates();
-  const templates = (data || []).slice(0, 5);
-  const loading = isLoading;
+  const templates = (data ?? []).slice(0, 5);
   const { data: exercisesList = [], isLoading: exercisesLoading } = useExercises();
   const exercisesCarouselSlice = exercisesList.slice(0, 12);
 
@@ -81,7 +78,6 @@ export function WorkoutTrackerScreen({
     <View style={styles.container}>
       {showBackButton ? <FloatingBackButton onPress={() => navigation?.goBack()} /> : null}
 
-      {/* Top Header Icons */}
       <View style={[styles.header, { paddingTop }]} />
 
       <ScrollView
@@ -113,7 +109,6 @@ export function WorkoutTrackerScreen({
           />
         </View>
 
-        {/* Exercises */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Exercises</Text>
           <Pressable onPress={onNavigateToExercises}>
@@ -147,7 +142,6 @@ export function WorkoutTrackerScreen({
           )}
         </View>
 
-        {/* Activity Types */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Activity Types</Text>
         </View>
@@ -183,7 +177,6 @@ export function WorkoutTrackerScreen({
           ))}
         </ScrollView>
 
-        {/* Workouts */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Workouts</Text>
           <Pressable onPress={onNavigateToMyWorkouts}>
@@ -196,7 +189,7 @@ export function WorkoutTrackerScreen({
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.horizontalScroll}
         >
-          {loading ? (
+          {isLoading ? (
             <ActivityIndicator color={colors.bodyOrange} />
           ) : templates.length === 0 ? (
             <Text style={{ color: colors.textSecondary, marginLeft: space.md }}>No workouts found. Create one to get started!</Text>
@@ -225,7 +218,6 @@ export function WorkoutTrackerScreen({
             )))}
         </ScrollView>
 
-        {/* Marketplace */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Marketplace</Text>
         </View>
@@ -247,29 +239,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md,
     paddingBottom: space.xs,
     alignItems: 'center',
-  },
-  headerLeft: { width: 40 },
-  headerRight: {
-    flexDirection: 'row',
-    gap: space.sm,
-  },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.bgElevated,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-  },
-  aiCircle: {
-    borderColor: colors.bodyOrange,
-  },
-  aiText: {
-    color: colors.bodyOrange,
-    fontWeight: 'bold',
-    fontSize: 12,
   },
   content: {
     paddingHorizontal: space.md,
@@ -336,157 +305,6 @@ const styles = StyleSheet.create({
     ...typography.sm,
     color: colors.textTertiary,
   },
-  mainCard: {
-    backgroundColor: colors.bgCharcoal,
-    borderRadius: radius['2xl'],
-    padding: space.xl,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    marginTop: space.lg,
-    marginBottom: space.lg,
-  },
-  mainCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: space.sm,
-  },
-  activeTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 92, 0, 0.15)', // Orange opacity
-    paddingHorizontal: space.sm,
-    paddingVertical: 6,
-    borderRadius: radius.full,
-    gap: 6,
-  },
-  activeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.bodyOrange,
-  },
-  activeTagText: {
-    color: colors.bodyOrange,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  durationBig: {
-    color: colors.textPrimary,
-    fontSize: 24,
-    fontWeight: '800',
-    textAlign: 'right',
-    lineHeight: 24,
-  },
-  durationSmall: {
-    color: colors.textSecondary,
-    fontSize: 10,
-    fontWeight: '700',
-    textAlign: 'right',
-  },
-  mainTitle: {
-    color: colors.textPrimary,
-    fontSize: 28,
-    fontWeight: '700',
-    lineHeight: 34,
-    marginTop: space.xs,
-    marginBottom: space.lg,
-  },
-  progressSection: {
-    marginBottom: space.lg,
-  },
-  progressLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  progressLabel: {
-    color: colors.bodyOrange,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  progressBarBg: {
-    height: 4,
-    backgroundColor: colors.bgElevated,
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: colors.bodyOrange,
-  },
-  dayLabel: {
-    color: colors.textTertiary,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
-    marginBottom: space.md,
-    textTransform: 'uppercase',
-  },
-  exerciseList: {
-    gap: space.md,
-  },
-  exerciseRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-  },
-  exerciseIndexCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.bgElevated,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  exerciseIndexText: {
-    color: colors.textSecondary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  exerciseInfo: {
-    flex: 1,
-  },
-  exerciseName: {
-    color: colors.textPrimary,
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  exerciseMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  metaBadge: {
-    backgroundColor: 'rgba(138, 112, 255, 0.15)', // Violet opacity
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  metaText: {
-    color: '#A1A1AA',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  playButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.bodyOrange,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: colors.bodyOrange,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-
-
-  // Templates
   sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

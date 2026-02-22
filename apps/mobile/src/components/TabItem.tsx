@@ -61,7 +61,7 @@ export function TabItem({ label, icon, iconImage, activeColor, active, onPress }
   return (
     <Pressable
       style={styles.tab}
-      onPress={onPress ?? (() => {})}
+      onPress={onPress ?? (() => { })}
       accessibilityRole="tab"
       accessibilityState={{ selected: active }}
       accessibilityLabel={label}
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: space.sm,
-    paddingBottom: 20,
+    paddingBottom: 8,
     gap: 6,
   },
   label: {
