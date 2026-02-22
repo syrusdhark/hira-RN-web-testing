@@ -162,19 +162,23 @@ export function WorkoutTrackerScreen({
               onPress={() => onNavigateToActivityType?.(item.title)}
               style={({ pressed }) => [pressed && { opacity: 0.9 }]}
             >
-              <ImageBackground
-                source={item.source}
-                resizeMode="cover"
-                style={[styles.activityTypeBox, { width: activityTypeCardWidth, height: activityTypeCardHeight }]}
-                imageStyle={styles.activityTypeImage}
-              >
-                <LinearGradient
-                  colors={['transparent', 'rgba(0,0,0,0.8)']}
-                  style={styles.activityTypeTitleWrap}
-                >
-                  <Text style={styles.activityTypeTitle}>{item.title}</Text>
-                </LinearGradient>
-              </ImageBackground>
+              <View style={[styles.activityTypeShadow, { width: activityTypeCardWidth, height: activityTypeCardHeight }]}>
+                <View style={styles.activityTypeClip}>
+                  <ImageBackground
+                    source={item.source}
+                    resizeMode="cover"
+                    style={styles.activityTypeImageBg}
+                    imageStyle={styles.activityTypeImage}
+                  >
+                    <LinearGradient
+                      colors={['transparent', 'rgba(0,0,0,0.8)']}
+                      style={styles.activityTypeTitleWrap}
+                    >
+                      <Text style={styles.activityTypeTitle}>{item.title}</Text>
+                    </LinearGradient>
+                  </ImageBackground>
+                </View>
+              </View>
             </Pressable>
           ))}
         </ScrollView>
@@ -494,14 +498,27 @@ const styles = StyleSheet.create({
     paddingRight: space.md,
     marginBottom: space.lg,
   },
-  activityTypeBox: {
-    backgroundColor: '#fff',
+  activityTypeShadow: {
+    borderRadius: radius.xl,
+    backgroundColor: 'transparent',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  activityTypeClip: {
+    flex: 1,
     borderRadius: radius.xl,
     overflow: 'hidden',
+    backgroundColor: '#fff',
   },
-  activityTypeImage: {
-    borderRadius: radius.xl,
+  activityTypeImageBg: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
   },
+  activityTypeImage: {},
   activityTypeTitleWrap: {
     position: 'absolute',
     bottom: 0,

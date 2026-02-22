@@ -104,13 +104,15 @@ export function CommunityPostCard({
       ) : null}
 
       {firstMedia ? (
-        <View style={styles.mediaWrap}>
-          <Image source={{ uri: firstMedia }} style={[styles.media, { width: mediaWidth, height: mediaHeight }]} resizeMode="cover" />
-          {isVideo && (
-            <View style={styles.playOverlay}>
-              <MaterialCommunityIcons name="play-circle" size={56} color="rgba(255,255,255,0.9)" />
-            </View>
-          )}
+        <View style={styles.mediaShadowWrap}>
+          <View style={[styles.mediaWrap, { width: mediaWidth, height: mediaHeight }]}>
+            <Image source={{ uri: firstMedia }} style={styles.media} resizeMode="cover" />
+            {isVideo && (
+              <View style={styles.playOverlay}>
+                <MaterialCommunityIcons name="play-circle" size={56} color="rgba(255,255,255,0.9)" />
+              </View>
+            )}
+          </View>
         </View>
       ) : null}
 
@@ -232,14 +234,17 @@ const styles = StyleSheet.create({
     color: colors.primaryViolet,
     fontWeight: '600',
   },
+  mediaShadowWrap: {
+    marginBottom: space.sm,
+  },
   mediaWrap: {
     borderRadius: radius.md,
     overflow: 'hidden',
-    marginBottom: space.sm,
     position: 'relative',
   },
   media: {
-    borderRadius: radius.md,
+    width: '100%',
+    height: '100%',
   },
   playOverlay: {
     ...StyleSheet.absoluteFillObject,

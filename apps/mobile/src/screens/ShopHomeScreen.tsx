@@ -224,29 +224,31 @@ function FeaturedCard({ product }: { product: any }) {
     const image = product.images?.[0];
 
     return (
-        <Pressable style={styles.featuredCard}>
-            <LinearGradient
-                colors={['#1a3a2e', '#0d1f1a']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.featuredGradient}
-            >
-                {image && (
-                    <Image source={{ uri: image }} style={styles.featuredImage} />
-                )}
-                <View style={styles.featuredContent}>
-                    <Text style={styles.featuredTitle} numberOfLines={2}>
-                        {product.title}
-                    </Text>
-                    <View style={styles.featuredFooter}>
-                        <Text style={styles.featuredPrice}>${price.toFixed(2)}</Text>
-                        <Pressable style={styles.viewPlanButton}>
-                            <Text style={styles.viewPlanText}>View Plan</Text>
-                            <MaterialCommunityIcons name="arrow-right" size={14} color={colors.textPrimary} />
-                        </Pressable>
+        <Pressable style={styles.featuredCardShadow}>
+            <View style={styles.featuredCardContainer}>
+                <LinearGradient
+                    colors={['#1a3a2e', '#0d1f1a']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.featuredGradient}
+                >
+                    {image && (
+                        <Image source={{ uri: image }} style={styles.featuredImage} resizeMode="cover" />
+                    )}
+                    <View style={styles.featuredContent}>
+                        <Text style={styles.featuredTitle} numberOfLines={2}>
+                            {product.title}
+                        </Text>
+                        <View style={styles.featuredFooter}>
+                            <Text style={styles.featuredPrice}>${price.toFixed(2)}</Text>
+                            <Pressable style={styles.viewPlanButton}>
+                                <Text style={styles.viewPlanText}>View Plan</Text>
+                                <MaterialCommunityIcons name="arrow-right" size={14} color={colors.textPrimary} />
+                            </Pressable>
+                        </View>
                     </View>
-                </View>
-            </LinearGradient>
+                </LinearGradient>
+            </View>
         </Pressable>
     );
 }
@@ -276,21 +278,22 @@ function ProductCard({ product, onAddToCart }: { product: any, onAddToCart: () =
     };
 
     return (
-        <Pressable style={styles.productCard}>
-            <View style={styles.productImageContainer}>
-                {image ? (
-                    <Image source={{ uri: image }} style={styles.productImage} />
-                ) : (
-                    <View style={[styles.productImage, styles.productImagePlaceholder]}>
-                        <MaterialCommunityIcons name="image-off" size={32} color={colors.textTertiary} />
-                    </View>
-                )}
-                <Pressable style={styles.favoriteButton}>
-                    <MaterialCommunityIcons name="heart-outline" size={18} color={colors.textPrimary} />
-                </Pressable>
-            </View>
+        <Pressable style={styles.productCardShadow}>
+            <View style={styles.productCardContainer}>
+                <View style={styles.productImageContainer}>
+                    {image ? (
+                        <Image source={{ uri: image }} style={styles.productImage} resizeMode="cover" />
+                    ) : (
+                        <View style={[styles.productImage, styles.productImagePlaceholder]}>
+                            <MaterialCommunityIcons name="image-off" size={32} color={colors.textTertiary} />
+                        </View>
+                    )}
+                    <Pressable style={styles.favoriteButton}>
+                        <MaterialCommunityIcons name="heart-outline" size={18} color={colors.textPrimary} />
+                    </Pressable>
+                </View>
 
-            <View style={styles.productInfo}>
+                <View style={styles.productInfo}>
                 <View style={styles.productRating}>
                     <MaterialCommunityIcons name="star" size={12} color={colors.actionAmber} />
                     <Text style={styles.ratingText}>{rating}</Text>
@@ -312,6 +315,7 @@ function ProductCard({ product, onAddToCart }: { product: any, onAddToCart: () =
                     </Pressable>
                 </View>
             </View>
+        </View>
         </Pressable>
     );
 }
@@ -396,9 +400,19 @@ const styles = StyleSheet.create({
         gap: space.md,
         marginBottom: space.md,
     },
-    featuredCard: {
+    featuredCardShadow: {
         width: SCREEN_WIDTH * 0.7,
         height: 200,
+        borderRadius: radius.xl,
+        backgroundColor: 'transparent',
+        shadowColor: '#000',
+        shadowOpacity: 0.08,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 4,
+    },
+    featuredCardContainer: {
+        flex: 1,
         borderRadius: radius.xl,
         overflow: 'hidden',
     },
@@ -455,13 +469,22 @@ const styles = StyleSheet.create({
         paddingHorizontal: space.md,
         gap: space.md,
     },
-    productCard: {
+    productCardShadow: {
         width: CARD_WIDTH,
-        backgroundColor: colors.bgCharcoal,
         borderRadius: radius.xl,
+        backgroundColor: 'transparent',
+        shadowColor: '#000',
+        shadowOpacity: 0.08,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 4,
+    },
+    productCardContainer: {
+        borderRadius: radius.xl,
+        overflow: 'hidden',
+        backgroundColor: colors.bgCharcoal,
         borderWidth: 1,
         borderColor: colors.borderSubtle,
-        overflow: 'hidden',
     },
     productImageContainer: {
         position: 'relative',

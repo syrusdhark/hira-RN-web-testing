@@ -28,24 +28,26 @@ export function BodyCard({
 }) {
   const accent = accentColors.orange;
   return (
-    <View style={[styles.card, styles.bodyCard, { borderColor: `${accent}30` }]}>
-      <LinearGradient
-        colors={[BODY_GRADIENT_TOP, BODY_GRADIENT_BOTTOM]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        locations={[0, 1]}
-        style={styles.bodyCardGradient}
-      />
-      <View style={styles.bodyValueRow}>
-        <Text style={styles.bigValue}>{value}</Text>
-        <Text style={styles.bodyUnitLabel}>{unit}</Text>
-      </View>
-      {pace != null && pace !== '' && (
-        <View style={styles.bodyPaceRow}>
-          <Text style={styles.bodyPaceValue}>{pace}</Text>
-          <Text style={styles.bodyUnitLabel}>pace</Text>
+    <View style={[styles.bodyShadowContainer, { borderColor: `${accent}30` }]}>
+      <View style={[styles.bodyCardContainer, { borderColor: `${accent}30` }]}>
+        <LinearGradient
+          colors={[BODY_GRADIENT_TOP, BODY_GRADIENT_BOTTOM]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          locations={[0, 1]}
+          style={styles.bodyCardGradient}
+        />
+        <View style={styles.bodyValueRow}>
+          <Text style={styles.bigValue}>{value}</Text>
+          <Text style={styles.bodyUnitLabel}>{unit}</Text>
         </View>
-      )}
+        {pace != null && pace !== '' && (
+          <View style={styles.bodyPaceRow}>
+            <Text style={styles.bodyPaceValue}>{pace}</Text>
+            <Text style={styles.bodyUnitLabel}>pace</Text>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
@@ -99,113 +101,130 @@ export function NextWorkoutCard({
   return (
     <Pressable
       style={({ pressed }) => [
-        styles.card,
-        styles.workoutCard,
+        styles.workoutShadowContainer,
         fullWidth && styles.cardFullWidth,
-        { borderColor: `${accent}50` },
-        pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }
+        pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] },
       ]}
       onPress={onPress}
     >
-      <Image
-        source={backgroundSource}
-        style={styles.moveCardBgImage}
-        resizeMode="contain"
-      />
-      <LinearGradient
-        colors={WORKOUT_CARD_BG_GRADIENT}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        style={styles.workoutCardBgGradient}
-      />
-      {title ? (
-        <Text style={[styles.workoutCardTitle, { marginBottom: space.xs }]}>{title}</Text>
-      ) : null}
-      <Text style={styles.moveCardProgramName} numberOfLines={2}>
-        {mainTitle}
-      </Text>
-      {(!hideSubtitle || !hideCta) ? (
-        <View style={styles.moveCardContentRow}>
-          <View style={styles.moveCardLeftColumn}>
-            {!hideSubtitle ? (
-              <View style={styles.moveCardSubtitleRow}>
-                <Text style={styles.moveCardSubtitleText}>{subtitleText}</Text>
+      <View style={[styles.workoutCardContainer, { borderColor: `${accent}50` }]}>
+        <Image
+          source={backgroundSource}
+          style={styles.moveCardBgImage}
+          resizeMode="cover"
+        />
+        <LinearGradient
+          colors={WORKOUT_CARD_BG_GRADIENT}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={styles.workoutCardBgGradient}
+        />
+        <View style={styles.workoutCardContent}>
+          {title ? (
+            <Text style={[styles.workoutCardTitle, { marginBottom: space.xs }]}>{title}</Text>
+          ) : null}
+          <Text style={styles.moveCardProgramName} numberOfLines={2}>
+            {mainTitle}
+          </Text>
+          {(!hideSubtitle || !hideCta) ? (
+            <View style={styles.moveCardContentRow}>
+              <View style={styles.moveCardLeftColumn}>
+                {!hideSubtitle ? (
+                  <View style={styles.moveCardSubtitleRow}>
+                    <Text style={styles.moveCardSubtitleText}>{subtitleText}</Text>
+                  </View>
+                ) : null}
               </View>
-            ) : null}
-          </View>
-          {!hideCta ? (
-            <View style={styles.moveCardRightColumn}>
-              {completedToday ? (
-                <Text style={styles.moveCardCompletedText}>Completed</Text>
-              ) : onStartPress != null ? (
-                <Pressable
-                  style={styles.moveCardPillButtonWrap}
-                  onPress={onStartPress}
-                >
-                  <LinearGradient
-                    colors={[accent, '#E65100']}
-                    start={{ x: 0.5, y: 0 }}
-                    end={{ x: 0.5, y: 1 }}
-                    style={styles.moveCardPillButton}
-                  >
-                    <Text style={styles.moveCardPillButtonText}>{ctaLabel}</Text>
-                  </LinearGradient>
-                </Pressable>
-              ) : (
-                <View style={styles.moveCardPillButtonWrap}>
-                  <LinearGradient
-                    colors={[accent, '#E65100']}
-                    start={{ x: 0.5, y: 0 }}
-                    end={{ x: 0.5, y: 1 }}
-                    style={styles.moveCardPillButton}
-                  >
-                    <Text style={styles.moveCardPillButtonText}>{ctaLabel}</Text>
-                  </LinearGradient>
+              {!hideCta ? (
+                <View style={styles.moveCardRightColumn}>
+                  {completedToday ? (
+                    <Text style={styles.moveCardCompletedText}>Completed</Text>
+                  ) : onStartPress != null ? (
+                    <Pressable
+                      style={styles.moveCardPillButtonWrap}
+                      onPress={onStartPress}
+                    >
+                      <LinearGradient
+                        colors={[accent, '#E65100']}
+                        start={{ x: 0.5, y: 0 }}
+                        end={{ x: 0.5, y: 1 }}
+                        style={styles.moveCardPillButton}
+                      >
+                        <Text style={styles.moveCardPillButtonText}>{ctaLabel}</Text>
+                      </LinearGradient>
+                    </Pressable>
+                  ) : (
+                    <View style={styles.moveCardPillButtonWrap}>
+                      <LinearGradient
+                        colors={[accent, '#E65100']}
+                        start={{ x: 0.5, y: 0 }}
+                        end={{ x: 0.5, y: 1 }}
+                        style={styles.moveCardPillButton}
+                      >
+                        <Text style={styles.moveCardPillButtonText}>{ctaLabel}</Text>
+                      </LinearGradient>
+                    </View>
+                  )}
                 </View>
-              )}
+              ) : null}
             </View>
           ) : null}
         </View>
-      ) : null}
+      </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.bgCharcoal,
-    borderRadius: radius['2xl'],
-    padding: space.lg,
-    borderWidth: 1,
-    width: '48.5%',
-    minHeight: 180,
-    justifyContent: 'space-between',
-    marginBottom: space.md,
-  },
   cardFullWidth: {
     width: '100%',
   },
-  bodyCard: {
-    overflow: 'hidden',
+  bodyShadowContainer: {
+    width: '48.5%',
+    marginBottom: space.md,
+    borderRadius: radius['2xl'],
+    backgroundColor: 'transparent',
     shadowColor: colors.bodyOrange,
-    shadowOffset: { width: 0, height: 0 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 6,
+  },
+  bodyCardContainer: {
+    borderRadius: radius['2xl'],
+    overflow: 'hidden',
+    backgroundColor: colors.bgCharcoal,
+    borderWidth: 1,
+    minHeight: 180,
+    justifyContent: 'space-between',
+    padding: space.lg,
   },
   bodyCardGradient: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: radius['2xl'],
   },
-  workoutCard: {
+  workoutShadowContainer: {
+    width: '48.5%',
+    marginBottom: space.md,
+    borderRadius: radius['2xl'],
+    backgroundColor: 'transparent',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  workoutCardContainer: {
+    borderRadius: radius['2xl'],
     overflow: 'hidden',
+    backgroundColor: colors.bgCharcoal,
     borderWidth: 1.5,
     minHeight: 248,
-    shadowColor: colors.actionAmber,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.45,
-    shadowRadius: 14,
-    elevation: 8,
+  },
+  workoutCardContent: {
+    ...StyleSheet.absoluteFillObject,
+    padding: space.lg,
+    justifyContent: 'space-between',
   },
   workoutCardBgGradient: {
     ...StyleSheet.absoluteFillObject,
@@ -215,7 +234,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     width: '100%',
     height: '100%',
-    borderRadius: radius['2xl'],
   },
   workoutCardTitle: {
     ...typography.xs,
