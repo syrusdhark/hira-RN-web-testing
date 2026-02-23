@@ -18,6 +18,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { sendOllamaMessage } from '../services/ai/local-ollama.service';
+import { useWorkoutSessions, type WorkoutSessionSummary } from '../hooks/useWorkoutSessions';
 
 const COLORS = {
   bg: '#000000',
@@ -42,6 +43,38 @@ function generateId() {
 
 function formatTime(date: Date) {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatSessionDate(performedAt: string) {
+  try {
+    const d = new Date(performedAt);
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch {
+    return performedAt;
+  }
+}
+
+function formatWorkoutHistoryForPrompt(sessions: WorkoutSessionSummary[]): string {
+  if (!sessions.length) return 'No workouts recorded yet.';
+  return sessions
+    .map((s, i) => {
+      const date = formatSessionDate(s.performed_at);
+      const duration = s.duration_minutes != null ? `${s.duration_minutes} min` : '';
+      const type = s.session_type || 'general';
+      const volume = s.total_weight_kg != null ? `volume ${s.total_weight_kg} kg` : '';
+      const parts = [`${i + 1}. ${date}: ${s.title} (${type})`, duration, volume].filter(Boolean);
+      return parts.join(', ');
+    })
+    .join('\n');
+}
+
+function buildWorkoutHistoryMessage(sessions: WorkoutSessionSummary[]): string {
+  const block = formatWorkoutHistoryForPrompt(sessions);
+  return (
+    'Show my workout history. Here is my recorded data (you can present it in whatever order I ask for—e.g. most recent first, by date, by workout type):\n\n' +
+    block +
+    '\n\nPresent it clearly. If I want a different order or filter, I will say so.'
+  );
 }
 
 function ThinkingDots() {
@@ -189,6 +222,7 @@ function MicOrSendButton({ hasText, onSend }: { hasText: boolean; onSend: () => 
 }
 
 export function AiChatScreen({ onNavigateToWorkout }: { onNavigateToWorkout?: () => void }) {
+  const { data: workoutSessions = [] } = useWorkoutSessions();
   const [messages, setMessages] = useState<any[]>([
     {
       id: generateId(),
@@ -210,73 +244,81 @@ export function AiChatScreen({ onNavigateToWorkout }: { onNavigateToWorkout?: ()
     }, 60);
   }, []);
 
-  const handleSend = useCallback(async () => {
-    const text = input.trim();
-    if (!text || isLoading) return;
+  const handleSendMessage = useCallback(
+    async (content: string) => {
+      if (!content.trim() || isLoading) return;
 
-    const now = new Date();
-    const userMsg = {
-      id: generateId(),
-      role: 'user',
-      content: text,
-      status: 'done',
-      time: formatTime(now),
-    };
+      const now = new Date();
+      const userMsg = {
+        id: generateId(),
+        role: 'user',
+        content: content.trim(),
+        status: 'done' as const,
+        time: formatTime(now),
+      };
 
-    const thinkingId = generateId();
-    const thinkingMsg = {
-      id: thinkingId,
-      role: 'assistant',
-      content: '',
-      status: 'thinking',
-      time: formatTime(now),
-    };
+      const thinkingId = generateId();
+      const thinkingMsg = {
+        id: thinkingId,
+        role: 'assistant' as const,
+        content: '',
+        status: 'thinking' as const,
+        time: formatTime(now),
+      };
 
-    setInput('');
-    setIsLoading(true);
-    setMessages((prev) => [...prev, userMsg, thinkingMsg]);
-    scrollToBottom();
-
-    const history = [...messages, userMsg].map(({ role, content }) => ({ role, content }));
-
-    try {
-      const streamId = generateId();
-      streamingIdRef.current = streamId;
-      let accumulated = '';
-
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === thinkingId
-            ? { ...m, id: streamId, status: 'streaming', content: '' }
-            : m
-        )
-      );
-
-      await sendOllamaMessage(history, (delta) => {
-        accumulated += delta;
-        setMessages((prev) =>
-          prev.map((m) => (m.id === streamId ? { ...m, content: accumulated } : m))
-        );
-        scrollToBottom();
-      });
-
-      setMessages((prev) =>
-        prev.map((m) => (m.id === streamId ? { ...m, status: 'done' } : m))
-      );
-    } catch (err: any) {
-      const errId = streamingIdRef.current || thinkingId;
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === errId || m.id === thinkingId
-            ? { ...m, status: 'error', content: '\u26a0\ufe0f ' + err.message }
-            : m
-        )
-      );
-    } finally {
-      setIsLoading(false);
+      setIsLoading(true);
+      setMessages((prev) => [...prev, userMsg, thinkingMsg]);
       scrollToBottom();
-    }
-  }, [input, isLoading, messages, scrollToBottom]);
+
+      const history = [...messages, userMsg].map(({ role, content: c }) => ({ role, content: c }));
+
+      try {
+        const streamId = generateId();
+        streamingIdRef.current = streamId;
+        let accumulated = '';
+
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === thinkingId
+              ? { ...m, id: streamId, status: 'streaming' as const, content: '' }
+              : m
+          )
+        );
+
+        await sendOllamaMessage(history, (delta) => {
+          accumulated += delta;
+          setMessages((prev) =>
+            prev.map((m) => (m.id === streamId ? { ...m, content: accumulated } : m))
+          );
+          scrollToBottom();
+        });
+
+        setMessages((prev) =>
+          prev.map((m) => (m.id === streamId ? { ...m, status: 'done' as const } : m))
+        );
+      } catch (err: any) {
+        const errId = streamingIdRef.current || thinkingId;
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === errId || m.id === thinkingId
+              ? { ...m, status: 'error' as const, content: '\u26a0\ufe0f ' + err.message }
+              : m
+          )
+        );
+      } finally {
+        setIsLoading(false);
+        scrollToBottom();
+      }
+    },
+    [isLoading, messages, scrollToBottom]
+  );
+
+  const handleSend = useCallback(() => {
+    const text = input.trim();
+    if (!text) return;
+    setInput('');
+    handleSendMessage(text);
+  }, [input, handleSendMessage]);
 
   const insets = useSafeAreaInsets();
   const headerPaddingTop = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 8 : 44;
@@ -319,11 +361,12 @@ export function AiChatScreen({ onNavigateToWorkout }: { onNavigateToWorkout?: ()
           >
             <TouchableOpacity
               style={styles.quickActionPill}
-              onPress={() => onNavigateToWorkout?.()}
+              onPress={() => handleSendMessage(buildWorkoutHistoryMessage(workoutSessions))}
               activeOpacity={0.7}
+              disabled={isLoading}
             >
-              <MaterialCommunityIcons name="plus" size={14} color="#60A5FA" />
-              <Text style={styles.quickActionText}>Log Workout</Text>
+              <MaterialCommunityIcons name="history" size={14} color="#60A5FA" />
+              <Text style={styles.quickActionText}>Log History</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.quickActionPill} activeOpacity={0.7}>
               <MaterialCommunityIcons name="fire" size={14} color="#FBBF24" />

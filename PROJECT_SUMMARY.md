@@ -41,10 +41,10 @@ The project is a design-system–driven mobile application focused on tracking w
    - **Screens**: Workout Tracker (hub), Program, Create Program, Template Create/Session, My Workouts, Workout History, Workout Insights (Muscle intensity), Shop, Cart, Personal Info, Community, Create Post, and others.
 
 3. **AI Chat (Hira)**
-   - **AiChatScreen**: In-app AI wellness coach tab with greeting, quick-suggestion chips (e.g. "Should I workout today?", "How am I progressing?"), conversation history, usage badge (X / 10K tokens or "Limit reached"), Clear chat, and "Hira is thinking…" during replies.
-   - **Backend**: `ai-chat.service.ts` and **AI service v2** (`services/ai/ai-chat-service-v2.ts`) — `sendMessage(userId, userMessage, conversationId?)`, `getUserUsage(userId)`, `clearConversation(conversationId)`, `getConversationHistory(conversationId)`; daily token limit (e.g. 10K) for production API; supports Anthropic and OpenRouter (key via `EXPO_PUBLIC_ANTHROPIC_API_KEY`) and local Ollama.
-   - **Context**: `ai-context.service.ts` and `context-builder.service.ts` build user context (profile, workout) for personalized responses; nutrition/sleep are keyword-only (no app data).
-   - **Persistence**: Messages and conversations in Supabase (`ai_messages`, `ai_conversations`); usage in `ai_usage_logs`.
+   - **AiChatScreen**: In-app AI wellness coach tab (Hira tab in bottom nav). Deep black UI, edge-to-edge layout, greeting from Hira, small quick-action pills (Log Workout, Check Calories, I'm not well) shown only when input is empty and no user messages yet; pills hide when user types. No "Clear" button in header; no "Today HH:MM" timestamp row. Streaming replies with "thinking" state; error state in bubble. See **"AI Chat (Hira) – End-to-End"** below for full detail.
+   - **Backend**: Chat tab currently uses **local Ollama** ([local-ollama.service.ts](apps/mobile/src/services/ai/local-ollama.service.ts)) with Phi-4-mini and production system prompts from [system-prompts.ts](apps/mobile/src/services/ai/system-prompts.ts). Production path: `ai-chat.service.ts` and **AI service v2** (`services/ai/ai-chat-service-v2.ts`) — `sendMessage`, `getUserUsage`, `clearConversation`, `getConversationHistory`; daily token limit for production API; Anthropic/OpenRouter and local Ollama.
+   - **Context**: `ai-context.service.ts` and `context-builder.service.ts` build user context (profile, workout) for personalized responses; `system-prompts.ts` provides `buildContextualPrompt` to inject name, feeling, energy, recent workouts, recovery into prompts.
+   - **Persistence**: Production path uses Supabase (`ai_messages`, `ai_conversations`, `ai_usage_logs`). Local Ollama chat is in-memory only (no persistence in current implementation).
 
 4. **Workout Tracking**
    - **Workout Hub**: `WorkoutTrackerScreen` — Move card (program CTA), Muscle intensity, My Workouts, marketplace. Shown as the **Today** tab content (no back button) and as a standalone screen (back to track). Move card taps go to Program; "See all" goes to My Workouts; Muscle intensity goes to Workout Insights; back from each returns to the originating screen/tab.
@@ -139,7 +139,7 @@ graph TD
 | workout | WorkoutTrackerScreen | Custom (View + ScrollView) | useProgramSchedule, useWorkoutTemplates, useUserStreaks |
 | profile | ProfileScreen | EnvironmentContainer + ScreenHeader + Section | ProfileContext |
 | shop (tab) | ShopHomeScreen | EnvironmentContainer + ScreenHeader | useShopProducts, CartContext |
-| chat (tab) | AiChatScreen | EnvironmentContainer + Section | ai-chat.service, useProfile |
+| chat (tab) | AiChatScreen | EnvironmentContainer (noPadding, solidBackground black) + custom chat layout | local-ollama.service, system-prompts.ts; see "AI Chat (Hira) – End-to-End" |
 | community (tab) | CommunityScreen | EnvironmentContainer + Section | useCommunityFeed, useCommunityActions |
 | program | ProgramScreen | EnvironmentContainer + ScreenHeader + Section | useProgramSchedule |
 | program-create | CreateProgramScreen | EnvironmentContainer + Section | useCreateProgram, useWorkoutTemplates |
@@ -155,6 +155,140 @@ graph TD
 | activity-analytics | ActivityAnalyticsScreen | EnvironmentContainer + Section | analytics hooks |
 | exercises, exercise-detail, workout-session-detail, activity-type-workouts, add-exercises-for-session | ExercisesScreen, ExerciseDetailScreen, etc. | EnvironmentContainer + Section or custom | useExercises, useWorkoutSessionDetail, etc. |
 | preferences, integrations, help-support, achievements | PreferencesScreen, IntegrationsScreen, etc. | EnvironmentContainer + Section | ProfileContext / settings |
+
+---
+
+## AI Chat (Hira) – End-to-End
+
+This section describes the AI wellness chat feature in full: where it lives, how the screen is built, the complete system prompt set, and how the local Ollama pipeline works.
+
+### Where It Lives in the App
+
+- **Tab**: The **Hira** tab in the main bottom navigation ([TrackHomeScreen](apps/mobile/src/screens/TrackHomeScreen.tsx)) renders [AiChatScreen](apps/mobile/src/screens/AiChatScreen.tsx).
+- **Shell**: Content is wrapped in [EnvironmentContainer](apps/mobile/src/components/EnvironmentContainer.tsx) with `noPadding` and `solidBackground="#000000"` for the chat tab so the screen is edge-to-edge and deep black (no gradient).
+- **Entry**: `TrackHomeScreen` passes `onNavigateToWorkout` so the "Log Workout" pill can open the workout flow.
+
+### AiChatScreen – Build and Behavior
+
+**File**: [apps/mobile/src/screens/AiChatScreen.tsx](apps/mobile/src/screens/AiChatScreen.tsx)
+
+**Layout (top to bottom)**:
+
+1. **Root**: `View` with `styles.safeArea` (flex 1, background `#000000`).
+2. **Header row**: Single row with left menu icon (Pressable), centered title "Hira AI", and right spacer (same width as former Clear button so title stays centered). No Clear button; no "Today HH:MM" timestamp row.
+3. **Body**: `KeyboardAvoidingView` (flex 1, `padding`/`height` behavior, iOS offset 90):
+   - **FlatList**: Messages with `contentContainerStyle` listContent (horizontal padding 16, vertical 12, flexGrow 1). Each item is a `ChatBubble`.
+   - **Quick action pills** (conditional): Horizontal `ScrollView` with three pills — "Log Workout" (plus icon), "Check Calories" (fire icon), "I'm not well" (heart icon). Rendered only when `!input.trim() && messages.length <= 1` (empty input and only the initial greeting). Pills are small: icon size 14, text fontSize 12, paddingVertical 8, paddingHorizontal 12, gap 6; row has paddingVertical 8. "Log Workout" calls `onNavigateToWorkout?.()`.
+   - **Input bar**: Row with left "+" button (placeholder), `TextInput` (placeholder "Ask about your health...", multiline, maxLength 4000), and right button: either `ActivityIndicator` when loading or `MicOrSendButton` (mic when empty, send arrow when there is text). Input bar has `paddingBottom: 10 + insets.bottom` for safe area above tab bar.
+
+**State**:
+
+- `messages`: array of `{ id, role, content, status?, time }`. Initial message is one assistant message: "Hello! I am Hira, your AI assistant powered by Phi-4. How can I help you today?" with status `'done'`.
+- `input`: current input text.
+- `isLoading`: true while waiting for Ollama stream.
+- Refs: `flatListRef` (scroll to end), `streamingIdRef` (current streaming message id).
+
+**Send flow**:
+
+1. User taps send (or equivalent); `handleSend` runs.
+2. Trimmed input is appended as a user message; a placeholder assistant message with `status: 'thinking'` is appended; list scrolls to end.
+3. `history` is built from `messages` + new user message as `{ role, content }[]` (user/assistant only).
+4. `sendOllamaMessage(history, onStream)` is called. Each streamed chunk updates the placeholder message content; when stream ends, status set to `'done'`. On error, that message gets `status: 'error'` and error text.
+
+**UI components (internal)**:
+
+- **ChatBubble**: Renders one message. User messages right-aligned (purple bubble `#6C63FF`); assistant left-aligned (dark surface `#0a0a0a`). Shows `ThinkingDots` when status is `'thinking'`, error text when `'error'`, else `MessageContent` (parses markdown: bold, inline code, fenced code blocks).
+- **MessageContent**: Splits on code blocks and bold; renders `Text` and code `View` with theme colors.
+- **MicOrSendButton**: Animated toggle between mic and send icon based on `hasText`; on press when has text calls `onSend`.
+
+**Styling**: Local `COLORS` in AiChatScreen: bg/surface `#000000`, surfaceHigh `#0a0a0a`, border `#1a1a1a`, accent/userBubble `#6C63FF`, aiBubble `#0a0a0a`, text/muted/light, error. Styles for header, list, bubbles, thinking dots, input bar, pills, buttons — all in same file.
+
+### System Prompts – Full Detail
+
+**File**: [apps/mobile/src/services/ai/system-prompts.ts](apps/mobile/src/services/ai/system-prompts.ts)
+
+The chat tab uses the **Phi-4–optimized** prompt for local Ollama (Phi-4-mini). The file also defines a full set of Hira prompts and helpers for production or query-type routing.
+
+**Prompt currently in use (Ollama)** — `PHI4_OPTIMIZED_PROMPT`:
+
+```
+You are Hira, a wellness AI coach.
+
+Core rules:
+1. Focus on FEELINGS first (how user feels > what they did)
+2. Use "we" not "you should"
+3. Keep responses under 75 words
+4. Acknowledge their state before suggesting
+5. Offer 2-3 options, never commands
+6. Never shame, judge, or push through pain
+7. If medical concern: "Worth checking with a doctor"
+
+Tone: Supportive friend who listens and validates.
+
+Principles:
+- Rest = progress
+- Listen to body signals
+- Sustainable > optimal
+- Every body is different
+
+You have context about their workouts, feelings, and recovery. Use it to personalize guidance.
+
+Be warm, brief, and helpful.
+```
+
+**Full prompt set** — `HIRA_SYSTEM_PROMPTS`:
+
+- **wellness_coach**: Full Hira identity (supportive, feelings-first, "we" language, no judgment); wellness principles (rest = progress, sustainable > optimal, etc.); capabilities (workout history, feelings, recovery); response style (under 100 words, 2–3 options, acknowledge first); critical constraints (no medical advice, no push through pain, no strict meal plans, no aggressive language); example good/bad tone; reminder to be a supportive companion.
+- **simple**: Short variant — supportive wellness AI, focus on feelings, "we" language, under 50 words, never medical advice.
+- **workout_guidance**: Workout decisions; access to recent workouts, energy/feeling scores, recovery; suggest by how they feel today; offer rest option; 2–3 options; under 80 words.
+- **recovery**: Rest and recovery; validate feelings; rest days = progress; light alternatives; under 60 words.
+- **emotional_support**: Emotional support around wellness; listen and validate; do not provide therapy or diagnose; suggest professional support when appropriate; under 80 words.
+- **insights**: Progress insights from workout frequency, feelings over time, movement preferences, recovery; data-informed but human; under 70 words.
+
+**Helpers**:
+
+- `getSystemPrompt(queryType)`: Returns one of the above by `queryType` (`'workout' | 'recovery' | 'emotional' | 'insights' | 'simple' | 'general'`). Default `'general'` returns `wellness_coach`.
+- `buildContextualPrompt(basePrompt, userContext)`: Appends a "CURRENT USER CONTEXT" block to a base prompt. `userContext`: `{ name, todayFeeling?, todayEnergy?, recentWorkouts?, recoveryStatus? }`. Used to inject user data when context is available (e.g. production or when wiring context into Ollama).
+
+### Local Ollama Integration
+
+**File**: [apps/mobile/src/services/ai/local-ollama.service.ts](apps/mobile/src/services/ai/local-ollama.service.ts)
+
+- **Config**: `OLLAMA_API_CONFIG` — `baseUrl` (e.g. `http://192.168.29.33:11434/v1/chat/completions`), `model: 'phi4-mini:latest'`, `maxTokens: 4096`, `temperature: 0.7`, `systemPrompt: PHI4_OPTIMIZED_PROMPT` (from system-prompts.ts).
+- **API**: `sendOllamaMessage(messages, onStream)`.
+  - `messages`: array of `{ role, content }` (user/assistant only; no system role in this array).
+  - Request body: `model`, `messages: [{ role: 'system', content: OLLAMA_API_CONFIG.systemPrompt }, ...messages]`, `max_tokens`, `temperature`, `stream: true`.
+  - Uses `react-native-sse` `EventSource` with POST, JSON body, headers `Content-Type`, `HTTP-Referer`, `X-Title`.
+  - Parses SSE chunks for `choices[0].delta.content`; accumulates and calls `onStream(delta)` per chunk; resolves with full content on `[DONE]` or close; rejects on error with message.
+- **Flow**: AiChatScreen builds `history` from current messages + new user message, calls `sendOllamaMessage(history, (delta) => update streaming message)`, and updates UI on stream and completion/error.
+
+### Data Flow (AI Chat tab)
+
+```mermaid
+flowchart LR
+  User[User types and sends] --> AiChat[AiChatScreen handleSend]
+  AiChat --> History[Build history array]
+  History --> Ollama[sendOllamaMessage]
+  Ollama --> System[system prompt from system-prompts.ts]
+  System --> Ollama
+  Ollama --> SSE[EventSource POST stream]
+  SSE --> OllamaSvc[Ollama server Phi-4-mini]
+  OllamaSvc --> SSE
+  SSE --> OnStream[onStream delta]
+  OnStream --> AiChat
+  AiChat --> FlatList[FlatList update bubble]
+```
+
+### File Reference (AI Chat)
+
+| Purpose | File |
+|--------|------|
+| Chat UI | [AiChatScreen.tsx](apps/mobile/src/screens/AiChatScreen.tsx) |
+| System prompts | [system-prompts.ts](apps/mobile/src/services/ai/system-prompts.ts) |
+| Local Ollama client | [local-ollama.service.ts](apps/mobile/src/services/ai/local-ollama.service.ts) |
+| Tab shell / chat tab | [TrackHomeScreen.tsx](apps/mobile/src/screens/TrackHomeScreen.tsx) |
+| Container (noPadding, solidBackground) | [EnvironmentContainer.tsx](apps/mobile/src/components/EnvironmentContainer.tsx) |
+| Context building (for future use) | [context-builder.service.ts](apps/mobile/src/services/ai/context-builder.service.ts), [context-formatter.service.ts](apps/mobile/src/services/ai/context-formatter.service.ts) |
 
 ---
 
@@ -221,6 +355,7 @@ hira-ai-app-capacitor/
                                # CartScreen, ProfileScreen, PersonalInfoScreen, CommunityScreen,
                                # CreatePostScreen, ActivityTypeWorkoutsScreen, ExercisesScreen, ...
         services/              # ai-chat.service.ts, ai-context.service.ts,
+                               # ai/system-prompts.ts, ai/local-ollama.service.ts,
                                # HealthService.ts, HealthNormalizer.ts, ...
         theme.ts
         App.tsx
@@ -283,7 +418,9 @@ hira-ai-app-capacitor/
 - **Profile screen**:
   - Content wrapped in `ScrollView` (flex: 1, contentContainerStyle paddingTop/paddingBottom) so the full profile (including Integrations, Sign out) scrolls. Root background set to solid black (`colors.bgMidnight`); `LinearGradient` background removed.
 
-**4-week restructuring completed**: AI chat v2 (usage limits, clear chat, suggestions, history), `features/` re-exports (ai, shop, community, workout), path alias `@/*`, 5-tab nav (Profile replaces Progress), CHANGELOG and PROJECT_SUMMARY updated. Optional: React.memo on list items, device testing, EAS/TestFlight build.
+**4-week restructuring completed**: AI chat v2 (usage limits, suggestions, history), `features/` re-exports (ai, shop, community, workout), path alias `@/*`, 5-tab nav (Profile replaces Progress), CHANGELOG and PROJECT_SUMMARY updated. Optional: React.memo on list items, device testing, EAS/TestFlight build.
+
+**AI Chat (Hira)**: Chat tab uses local Ollama (Phi-4-mini) with production-grade system prompts in `services/ai/system-prompts.ts`. Default prompt is `PHI4_OPTIMIZED_PROMPT`; full set includes wellness_coach, simple, workout_guidance, recovery, emotional_support, insights plus `getSystemPrompt()` and `buildContextualPrompt()`. AiChatScreen: deep black edge-to-edge UI, no Clear button or Today timestamp, small quick-action pills (Log Workout, Check Calories, I'm not well) shown only when input empty and at most one message; streaming with thinking/error states. PROJECT_SUMMARY includes full "AI Chat (Hira) – End-to-End" section with full system prompt text, screen build detail, and data flow.
 
 **Upcoming Priorities**:
 1. **Checkout Flow**: Complete Shop payment integration.
