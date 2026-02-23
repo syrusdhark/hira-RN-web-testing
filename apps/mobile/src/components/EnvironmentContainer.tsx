@@ -10,11 +10,14 @@ export function EnvironmentContainer({
   footer,
   noPadding = false,
   disableScroll = false,
+  solidBackground,
 }: {
   children: React.ReactNode;
   footer?: React.ReactNode;
   noPadding?: boolean;
   disableScroll?: boolean;
+  /** When set, use a solid background instead of the gradient (e.g. '#000000' for chat tab). */
+  solidBackground?: string;
 }) {
   const insets = useSafeAreaInsets();
   const contentBottomPadding = footer != null
@@ -37,6 +40,26 @@ export function EnvironmentContainer({
     showsVerticalScrollIndicator: false,
     contentContainerStyle: contentStyle
   };
+
+  const wrapperStyle = [styles.root, solidBackground != null && { backgroundColor: solidBackground }];
+
+  if (solidBackground != null) {
+    return (
+      <View style={wrapperStyle}>
+        <Container
+          style={containerStyle}
+          {...containerProps}
+        >
+          {children}
+        </Container>
+        {footer && (
+          <View style={styles.fixedFooter}>
+            {footer}
+          </View>
+        )}
+      </View>
+    );
+  }
 
   return (
     <LinearGradient

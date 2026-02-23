@@ -1,417 +1,366 @@
-import React, { useCallback, useEffect, useState } from 'react';
+// @ts-nocheck
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TextInput,
-  Pressable,
-  ScrollView,
+  TouchableOpacity,
+  FlatList,
+  StyleSheet,
   KeyboardAvoidingView,
+  Platform,
   ActivityIndicator,
+  Animated,
+  Pressable,
+  StatusBar,
+  ScrollView,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useProfile } from '../context/ProfileContext';
-import {
-  createConversation,
-  sendMessage,
-  getUserUsage,
-  clearConversation,
-  getConversationHistory,
-  shouldUseLocalAi,
-  DAILY_LIMIT_REACHED,
-} from '../services/ai';
-import * as LocalAi from '../services/ai/local-ai.service';
-import { ScreenHeader } from '../components/ScreenHeader';
-import { colors, radius, space, typography } from '../theme';
+import { sendOllamaMessage } from '../services/ai/local-ollama.service';
 
-const accentPink = '#E879F9';
-
-type Message = { role: 'user' | 'assistant'; content: string };
-
-type AiChatScreenProps = {
-  onNavigateToWorkout?: () => void;
+const COLORS = {
+  bg: '#000000',
+  surface: '#000000',
+  surfaceHigh: '#0a0a0a',
+  border: '#1a1a1a',
+  accent: '#6C63FF',
+  accentLight: '#8B84FF',
+  accentGlow: 'rgba(108,99,255,0.18)',
+  userBubble: '#6C63FF',
+  aiBubble: '#0a0a0a',
+  text: '#E8E9F3',
+  textMuted: '#7B7D96',
+  textLight: '#FFFFFF',
+  success: '#4ADE80',
+  error: '#F87171',
 };
 
-type QuickAction = {
-  id: string;
-  label: string;
-  icon: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
-  iconColor: string;
-  gradientColors: [string, string];
-} & (
-    | { sendMessage: string; onPress?: never }
-    | { onPress: (nav: Record<string, any>) => void; sendMessage?: never }
-  );
+function generateId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
 
-const QUICK_ACTIONS: QuickAction[] = [
-  {
-    id: 'workout-today',
-    label: 'Should I workout today?',
-    icon: 'dumbbell',
-    iconColor: '#A78BFA',
-    gradientColors: ['#1e1b4b', '#312e81'],
-    sendMessage: 'Should I workout today?',
-  },
-  {
-    id: 'progress',
-    label: 'How am I progressing?',
-    icon: 'chart-line',
-    iconColor: '#34D399',
-    gradientColors: ['#064e3b', '#065f46'],
-    sendMessage: 'How am I progressing?',
-  },
-  {
-    id: 'recovery',
-    label: 'Tips for recovery',
-    icon: 'bed',
-    iconColor: '#60A5FA',
-    gradientColors: ['#1e3a5f', '#1e40af'],
-    sendMessage: 'What are some tips for recovery?',
-  },
-  {
-    id: 'motivation',
-    label: 'I need motivation',
-    icon: 'fire',
-    iconColor: '#FBBF24',
-    gradientColors: ['#78350f', '#92400e'],
-    sendMessage: 'I need some motivation to stay consistent.',
-  },
-];
+function formatTime(date: Date) {
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
 
-export function AiChatScreen({
-  onNavigateToWorkout,
-}: AiChatScreenProps) {
-  const { profile } = useProfile();
-  const userId = profile?.id ?? null;
+function ThinkingDots() {
+  const dot1 = useRef(new Animated.Value(0.3)).current;
+  const dot2 = useRef(new Animated.Value(0.3)).current;
+  const dot3 = useRef(new Animated.Value(0.3)).current;
 
-  const [conversationId, setConversationId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputText, setInputText] = useState('');
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [conversationReady, setConversationReady] = useState(false);
-  const [isOllamaReady, setIsOllamaReady] = useState<boolean | null>(null);
-  const [isWarming, setIsWarming] = useState(false);
-  const [usage, setUsage] = useState<{ tokensUsed: number; limit: number; limitReached: boolean } | null>(null);
-
-  const nav = { onNavigateToWorkout };
-
-  const refreshUsage = useCallback(async () => {
-    if (!userId) return;
-    const u = await getUserUsage(userId);
-    setUsage({ tokensUsed: u.tokensUsed, limit: u.limit, limitReached: u.limitReached });
-  }, [userId]);
-
-  const checkOllama = useCallback(async () => {
-    const useLocal = shouldUseLocalAi();
-    if (!useLocal) return;
-    setIsOllamaReady(null);
-    const available = await LocalAi.isAvailable();
-    setIsOllamaReady(available);
-    if (available) {
-      setIsWarming(true);
-      await LocalAi.warmup();
-      setIsWarming(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (shouldUseLocalAi()) {
-      checkOllama();
-    } else {
-      setIsOllamaReady(true);
-    }
-  }, [checkOllama]);
-
-  useEffect(() => {
-    if (!userId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const id = await createConversation(userId);
-        if (!cancelled) {
-          setConversationId(id);
-          setConversationReady(true);
-          const history = await getConversationHistory(id);
-          if (!cancelled) setMessages(history);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : 'Failed to start conversation');
-          setConversationReady(true);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [userId]);
-
-  useEffect(() => {
-    if (!userId || !conversationReady) return;
-    refreshUsage();
-  }, [userId, conversationReady, refreshUsage]);
-
-  const sendMessageHandler = useCallback(
-    async (text: string) => {
-      const trimmed = text.trim();
-      if (!trimmed || !userId || sending) return;
-      if (usage?.limitReached) {
-        setError("You've reached your daily limit. Try again tomorrow.");
-        return;
-      }
-
-      setError(null);
-      setInputText('');
-      setMessages((prev) => [...prev, { role: 'user', content: trimmed }]);
-      setSending(true);
-
-      try {
-        const { reply, conversationId: cid } = await sendMessage(userId, trimmed, conversationId);
-        if (cid !== conversationId) setConversationId(cid);
-        setMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
-        refreshUsage();
-      } catch (e) {
-        const err = e as Error & { code?: string };
-        const message =
-          err.code === DAILY_LIMIT_REACHED
-            ? err.message
-            : err instanceof Error
-              ? err.message
-              : 'Something went wrong. Please try again.';
-        setError(message);
-        setMessages((prev) => prev.slice(0, -1));
-        refreshUsage();
-      } finally {
-        setSending(false);
-      }
-    },
-    [userId, conversationId, sending, usage?.limitReached, refreshUsage]
-  );
-
-  const handleSend = useCallback(() => {
-    sendMessageHandler(inputText);
-  }, [inputText, sendMessageHandler]);
-
-  const handleQuickAction = useCallback(
-    (action: (typeof QUICK_ACTIONS)[number]) => {
-      if ('sendMessage' in action && typeof action.sendMessage === 'string') {
-        sendMessageHandler(action.sendMessage);
-        return;
-      }
-      if ('onPress' in action && action.onPress) {
-        action.onPress(nav);
-      }
-    },
-    [sendMessageHandler, nav]
-  );
-
-  const handleClearChat = useCallback(async () => {
-    if (!conversationId) return;
-    setError(null);
-    try {
-      await clearConversation(conversationId);
-      setMessages([]);
-    } catch {
-      setError('Failed to clear chat.');
-    }
-  }, [conversationId]);
-
-  const leftElement = (
-    <Pressable style={styles.menuButton} onPress={() => {}} accessibilityLabel="Menu">
-      <MaterialCommunityIcons name="menu" size={24} color={colors.textPrimary} />
-    </Pressable>
-  );
-
-  const showGreeting = messages.length === 0;
-  const useLocal = shouldUseLocalAi();
-  const showNotReadyCard = useLocal && isOllamaReady === false;
-  const showWarmingCard = useLocal && isWarming;
-  const showCheckingCard = useLocal && isOllamaReady === null;
-
-  if (showCheckingCard) {
-    return (
-      <View style={styles.root}>
-        <ScreenHeader leftElement={leftElement} />
-        <View style={styles.centeredCard}>
-          <ActivityIndicator size="large" color={colors.primaryViolet} />
-          <Text style={styles.warmingSubtext}>Checking connection...</Text>
-        </View>
-      </View>
-    );
-  }
-
-  if (showNotReadyCard) {
-    return (
-      <View style={styles.root}>
-        <ScreenHeader leftElement={leftElement} />
-        <View style={styles.centeredCard}>
-          <Text style={styles.errorCardTitle}>Local AI not running</Text>
-          <Text style={styles.errorCardText}>
-            Ollama is not running or not reachable. Start it on your computer:
-          </Text>
-          <View style={styles.codeBlock}>
-            <Text style={styles.codeText}>ollama serve</Text>
-          </View>
-          <Text style={styles.errorCardSubtext}>
-            Then ensure the model is installed: ollama pull phi4-mini:latest
-          </Text>
-          <Pressable style={styles.retryButton} onPress={checkOllama}>
-            <Text style={styles.retryButtonText}>Retry connection</Text>
-          </Pressable>
-        </View>
-      </View>
-    );
-  }
-
-  if (showWarmingCard) {
-    return (
-      <View style={styles.root}>
-        <ScreenHeader leftElement={leftElement} />
-        <View style={styles.centeredCard}>
-          <ActivityIndicator size="large" color={colors.primaryViolet} />
-          <Text style={styles.warmingTitle}>Warming up AI model...</Text>
-          <Text style={styles.warmingSubtext}>First load can take 10–30 seconds</Text>
-        </View>
-      </View>
-    );
-  }
+  React.useEffect(() => {
+    const pulse = (dot: Animated.Value, delay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(dot, { toValue: 1, duration: 350, useNativeDriver: true }),
+          Animated.timing(dot, { toValue: 0.3, duration: 350, useNativeDriver: true }),
+        ])
+      ).start();
+    pulse(dot1, 0);
+    pulse(dot2, 200);
+    pulse(dot3, 400);
+  }, [dot1, dot2, dot3]);
 
   return (
-    <View style={styles.root}>
-      <ScreenHeader
-        leftElement={leftElement}
-        rightBadges={
-          usage && usage.limit > 0
-            ? [
-                {
-                  value: usage.limitReached
-                    ? 'Limit reached'
-                    : `${usage.tokensUsed.toLocaleString()} / ${usage.limit.toLocaleString()}`,
-                  accent: usage.limitReached ? 'amber' : 'violet',
-                },
-              ]
-            : undefined
-        }
-      />
+    <View style={styles.thinkingRow}>
+      {[dot1, dot2, dot3].map((dot, i) => (
+        <Animated.View key={i} style={[styles.thinkingDot, { opacity: dot }]} />
+      ))}
+    </View>
+  );
+}
 
+function MessageContent({ content, isUser }: { content: string, isUser: boolean }) {
+  const baseColor = isUser ? COLORS.textLight : COLORS.text;
+  const segments = content.split(/(```[\s\S]*?```)/g);
+
+  return (
+    <View>
+      {segments.map((seg, idx) => {
+        if (seg.startsWith('```') && seg.endsWith('```')) {
+          const inner = seg.replace(/^```[^\n]*\n?/, '').replace(/```$/, '');
+          return (
+            <View key={idx} style={styles.codeBlock}>
+              <Text style={styles.codeText}>{inner.trim()}</Text>
+            </View>
+          );
+        }
+        const boldParts = seg.split(/(\*\*[^*]+\*\*)/g);
+        return (
+          <Text key={idx} style={[styles.msgText, { color: baseColor }]}>
+            {boldParts.map((part, j) => {
+              if (part.startsWith('**') && part.endsWith('**')) {
+                return (
+                  <Text key={j} style={styles.boldText}>
+                    {part.slice(2, -2)}
+                  </Text>
+                );
+              }
+              const codeParts = part.split(/(`[^`]+`)/g);
+              return codeParts.map((cp, k) => {
+                if (cp.startsWith('`') && cp.endsWith('`')) {
+                  return (
+                    <Text key={j + '-' + k} style={styles.inlineCode}>
+                      {cp.slice(1, -1)}
+                    </Text>
+                  );
+                }
+                return <Text key={j + '-' + k}>{cp}</Text>;
+              });
+            })}
+          </Text>
+        );
+      })}
+    </View>
+  );
+}
+
+function ChatBubble({ message }: { message: any }) {
+  const isUser = message.role === 'user';
+  const isThinking = message.status === 'thinking';
+  const isError = message.status === 'error';
+
+  return (
+    <View style={[styles.bubbleRow, isUser ? styles.rowRight : styles.rowLeft]}>
+      <View
+        style={[
+          styles.bubble,
+          isUser ? styles.userBubble : styles.aiBubble,
+          isError && styles.errorBubble,
+        ]}
+      >
+        {isThinking ? (
+          <ThinkingDots />
+        ) : isError ? (
+          <Text style={styles.errorText}>{message.content}</Text>
+        ) : (
+          <MessageContent content={message.content} isUser={isUser} />
+        )}
+      </View>
+    </View>
+  );
+}
+
+const ICON_TRANSITION_MS = 180;
+
+function MicOrSendButton({ hasText, onSend }: { hasText: boolean; onSend: () => void }) {
+  const micOpacity = useRef(new Animated.Value(1)).current;
+  const sendOpacity = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(micOpacity, {
+        toValue: hasText ? 0 : 1,
+        duration: ICON_TRANSITION_MS,
+        useNativeDriver: true,
+      }),
+      Animated.timing(sendOpacity, {
+        toValue: hasText ? 1 : 0,
+        duration: ICON_TRANSITION_MS,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [hasText, micOpacity, sendOpacity]);
+
+  const handlePress = () => {
+    if (!hasText) return;
+    Animated.sequence([
+      Animated.timing(scale, { toValue: 0.88, duration: 80, useNativeDriver: true }),
+      Animated.timing(scale, { toValue: 1, duration: 100, useNativeDriver: true }),
+    ]).start();
+    onSend();
+  };
+
+  return (
+    <Pressable onPress={handlePress} style={styles.circleBtnWrap}>
+      <Animated.View style={[styles.sendBtn, { transform: [{ scale }] }]}>
+        <Animated.View style={[styles.iconOverlay, { opacity: micOpacity }]} pointerEvents="none">
+          <MaterialCommunityIcons name="microphone" size={22} color={COLORS.textLight} />
+        </Animated.View>
+        <Animated.View style={[styles.iconOverlay, { opacity: sendOpacity }]} pointerEvents="none">
+          <MaterialCommunityIcons name="arrow-up" size={22} color={COLORS.textLight} />
+        </Animated.View>
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+export function AiChatScreen({ onNavigateToWorkout }: { onNavigateToWorkout?: () => void }) {
+  const [messages, setMessages] = useState<any[]>([
+    {
+      id: generateId(),
+      role: 'assistant',
+      content: 'Hello! I am Hira, your AI assistant powered by Phi-4. How can I help you today?',
+      status: 'done',
+      time: formatTime(new Date()),
+    },
+  ]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const flatListRef = useRef<FlatList>(null);
+  const streamingIdRef = useRef<string | null>(null);
+
+  const scrollToBottom = useCallback(() => {
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 60);
+  }, []);
+
+  const handleSend = useCallback(async () => {
+    const text = input.trim();
+    if (!text || isLoading) return;
+
+    const now = new Date();
+    const userMsg = {
+      id: generateId(),
+      role: 'user',
+      content: text,
+      status: 'done',
+      time: formatTime(now),
+    };
+
+    const thinkingId = generateId();
+    const thinkingMsg = {
+      id: thinkingId,
+      role: 'assistant',
+      content: '',
+      status: 'thinking',
+      time: formatTime(now),
+    };
+
+    setInput('');
+    setIsLoading(true);
+    setMessages((prev) => [...prev, userMsg, thinkingMsg]);
+    scrollToBottom();
+
+    const history = [...messages, userMsg].map(({ role, content }) => ({ role, content }));
+
+    try {
+      const streamId = generateId();
+      streamingIdRef.current = streamId;
+      let accumulated = '';
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === thinkingId
+            ? { ...m, id: streamId, status: 'streaming', content: '' }
+            : m
+        )
+      );
+
+      await sendOllamaMessage(history, (delta) => {
+        accumulated += delta;
+        setMessages((prev) =>
+          prev.map((m) => (m.id === streamId ? { ...m, content: accumulated } : m))
+        );
+        scrollToBottom();
+      });
+
+      setMessages((prev) =>
+        prev.map((m) => (m.id === streamId ? { ...m, status: 'done' } : m))
+      );
+    } catch (err: any) {
+      const errId = streamingIdRef.current || thinkingId;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === errId || m.id === thinkingId
+            ? { ...m, status: 'error', content: '\u26a0\ufe0f ' + err.message }
+            : m
+        )
+      );
+    } finally {
+      setIsLoading(false);
+      scrollToBottom();
+    }
+  }, [input, isLoading, messages, scrollToBottom]);
+
+  const insets = useSafeAreaInsets();
+  const headerPaddingTop = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 8 : 44;
+
+  return (
+    <View style={styles.safeArea}>
+      {/* Single-row header: menu | Hira AI | spacer */}
+      <View style={[styles.headerRow, { paddingTop: headerPaddingTop }]}>
+        <Pressable style={styles.headerMenuBtn} onPress={() => { }} accessibilityLabel="Menu">
+          <MaterialCommunityIcons name="menu" size={24} color={COLORS.text} />
+        </Pressable>
+        <Text style={styles.headerTitle} numberOfLines={1}>Hira AI</Text>
+        <View style={styles.headerSpacer} />
+      </View>
+
+      {/* Messages + Quick actions + Input */}
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior="padding"
-        keyboardVerticalOffset={90}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
+        <FlatList
+          style={{ flex: 1 }}
+          ref={flatListRef}
+          data={messages}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <ChatBubble message={item} />}
+          contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {showGreeting ? (
-            <>
-              <View style={styles.hero}>
-                <Text style={styles.heroTitle}>Hello, I'm Hira,</Text>
-                <Text style={styles.heroSubtitle}>
-                  your <Text style={styles.heroAccent}>AI</Text> wellness <Text style={styles.heroAccent}>coach.</Text>
-                </Text>
-                <Text style={styles.heroPrompt}>How can I help you today?</Text>
-              </View>
+          onContentSizeChange={scrollToBottom}
+        />
 
-              {conversationReady && QUICK_ACTIONS.length > 0 && (
-                <View style={styles.quickActions}>
-                  {QUICK_ACTIONS.map((action) => (
-                    <Pressable
-                      key={action.id}
-                      style={styles.quickCard}
-                      onPress={() => handleQuickAction(action)}
-                    >
-                      <LinearGradient
-                        colors={[...action.gradientColors]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.quickCardGradient}
-                      >
-                        <View style={[styles.quickIconWrap, { backgroundColor: action.iconColor + '22' }]}>
-                          <MaterialCommunityIcons
-                            name={action.icon}
-                            size={24}
-                            color={action.iconColor}
-                          />
-                        </View>
-                        <Text style={styles.quickLabel} numberOfLines={2}>
-                          {action.label}
-                        </Text>
-                      </LinearGradient>
-                    </Pressable>
-                  ))}
-                </View>
-              )}
-            </>
-          ) : (
-            <View style={styles.messageList}>
-              {messages.map((msg, i) => (
-                <View
-                  key={i}
-                  style={[styles.bubbleWrap, msg.role === 'user' ? styles.bubbleUser : styles.bubbleAssistant]}
-                >
-                  <View style={[styles.bubble, msg.role === 'user' ? styles.bubbleUserBg : styles.bubbleAssistantBg]}>
-                    <Text style={styles.bubbleText}>{msg.content}</Text>
-                  </View>
-                </View>
-              ))}
-              {sending && (
-                <View style={[styles.bubbleWrap, styles.bubbleAssistant]}>
-                  <View style={[styles.bubble, styles.bubbleAssistantBg, styles.thinkingBubble]}>
-                    <ActivityIndicator size="small" color={colors.primaryViolet} />
-                    <Text style={styles.thinkingText}>Hira is thinking…</Text>
-                  </View>
-                </View>
-              )}
+        {/* Quick action pills – only when input is empty and no user messages yet */}
+        {!input.trim() && messages.length <= 1 && (
+          <ScrollView
+            horizontal
+            style={styles.quickActionsScroll}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.quickActionsRow}
+          >
+            <TouchableOpacity
+              style={styles.quickActionPill}
+              onPress={() => onNavigateToWorkout?.()}
+              activeOpacity={0.7}
+            >
+              <MaterialCommunityIcons name="plus" size={14} color="#60A5FA" />
+              <Text style={styles.quickActionText}>Log Workout</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.quickActionPill} activeOpacity={0.7}>
+              <MaterialCommunityIcons name="fire" size={14} color="#FBBF24" />
+              <Text style={styles.quickActionText}>Check Calories</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.quickActionPill} activeOpacity={0.7}>
+              <MaterialCommunityIcons name="heart" size={14} color={COLORS.error} />
+              <Text style={styles.quickActionText}>I'm not well</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        )}
+
+        {/* Input Bar: Plus | TextInput | Mic or Send */}
+        <View style={[styles.inputBar, { paddingBottom: 10 + insets.bottom }]}>
+          <Pressable style={styles.circleBtnWrap} onPress={() => { }} accessibilityLabel="Attach">
+            <View style={styles.sendBtn}>
+              <MaterialCommunityIcons name="plus" size={22} color={COLORS.textLight} />
             </View>
-          )}
-
-          {messages.length > 0 && conversationReady && (
-            <Pressable style={styles.clearChatWrap} onPress={handleClearChat}>
-              <MaterialCommunityIcons name="broom" size={18} color={colors.textTertiary} />
-              <Text style={styles.clearChatText}>Clear chat</Text>
-            </Pressable>
-          )}
-
-          {error ? (
-            <View style={styles.errorWrap}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
-        </ScrollView>
-
-        <View style={styles.inputRow}>
-          <Pressable style={styles.inputIconBtn} onPress={() => {}} accessibilityLabel="Attach">
-            <MaterialCommunityIcons name="plus" size={22} color={colors.textPrimary} />
           </Pressable>
           <TextInput
-            style={styles.input}
-            placeholder="Type a message..."
-            placeholderTextColor={colors.textTertiary}
-            value={inputText}
-            onChangeText={setInputText}
-            editable={!sending && !!conversationId}
-            multiline={false}
-            maxLength={2000}
+            style={styles.textInput}
+            value={input}
+            onChangeText={setInput}
+            placeholder="Ask about your health..."
+            placeholderTextColor={COLORS.textMuted}
+            multiline
+            maxLength={4000}
+            returnKeyType="default"
+            blurOnSubmit={false}
           />
-          <Pressable style={styles.inputIconBtn} onPress={() => {}} accessibilityLabel="Voice input">
-            <MaterialCommunityIcons name="microphone-outline" size={22} color={colors.textPrimary} />
-          </Pressable>
-          <Pressable
-            style={[
-              styles.sendBtn,
-              (sending || !inputText.trim() || usage?.limitReached) && styles.sendBtnDisabled,
-            ]}
-            onPress={() => handleSend()}
-            disabled={sending || !inputText.trim() || !!usage?.limitReached}
-            accessibilityLabel="Send"
-          >
-            <MaterialCommunityIcons name="arrow-up" size={24} color={colors.textPrimary} />
-          </Pressable>
+          {isLoading ? (
+            <View style={styles.loadingBtn}>
+              <ActivityIndicator size="small" color={COLORS.accentLight} />
+            </View>
+          ) : (
+            <MicOrSendButton hasText={!!input.trim()} onSend={handleSend} />
+          )}
         </View>
       </KeyboardAvoidingView>
     </View>
@@ -419,235 +368,221 @@ export function AiChatScreen({
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.bgMidnight,
-  },
-  flex: {
-    flex: 1,
-  },
-  menuButton: {
-    padding: space.xs,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: space.md,
-    paddingBottom: space.lg,
-  },
-  hero: {
-    marginTop: space['2xl'],
-    marginBottom: space.xl,
-  },
-  heroTitle: {
-    ...typography['3xl'],
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: space.xs,
-  },
-  heroSubtitle: {
-    ...typography.xl,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: space.sm,
-  },
-  heroAccent: {
-    color: accentPink,
-  },
-  heroPrompt: {
-    ...typography.lg,
-    color: colors.textSecondary,
-  },
-  quickActions: {
+  safeArea: { flex: 1, backgroundColor: COLORS.bg },
+  flex: { flex: 1 },
+
+  // Header (single row)
+  headerRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: space.sm,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
-  quickCard: {
-    width: '48%',
-    marginBottom: space.md,
-    borderRadius: radius['2xl'],
-    overflow: 'hidden',
-    backgroundColor: colors.bgElevated,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-  },
-  quickCardGradient: {
+  headerMenuBtn: { padding: 8 },
+  headerTitle: {
     flex: 1,
-    padding: space.md,
-    borderRadius: radius['2xl'],
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.textLight,
+    textAlign: 'center',
   },
-  quickIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: space.sm,
+  headerSpacer: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    minWidth: 52,
   },
-  quickLabel: {
-    ...typography.sm,
-    fontWeight: '600',
-    color: colors.textPrimary,
+
+  // Quick action pills (small by default, low height)
+  quickActionsScroll: {
+    flexGrow: 0,
+    maxHeight: 60,
   },
-  messageList: {
-    paddingVertical: space.sm,
-  },
-  bubbleWrap: {
-    marginBottom: space.sm,
-  },
-  bubbleUser: {
-    alignItems: 'flex-end',
-  },
-  bubbleAssistant: {
-    alignItems: 'flex-start',
-  },
-  bubble: {
-    maxWidth: '85%',
-    paddingVertical: space.sm,
-    paddingHorizontal: space.md,
-    borderRadius: radius.lg,
-  },
-  bubbleUserBg: {
-    backgroundColor: colors.primaryViolet,
-  },
-  bubbleAssistantBg: {
-    backgroundColor: colors.bgElevated,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-  },
-  thinkingBubble: {
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
-  thinkingText: {
-    ...typography.sm,
-    color: colors.textTertiary,
-    marginTop: space.xs,
-  },
-  bubbleText: {
-    ...typography.base,
-    color: colors.textPrimary,
-  },
-  clearChatWrap: {
+  quickActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: space.xs,
-    paddingVertical: space.sm,
-    paddingHorizontal: space.xs,
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: COLORS.surface,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
   },
-  clearChatText: {
-    ...typography.sm,
-    color: colors.textTertiary,
+  quickActionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 9999,
+    backgroundColor: COLORS.surfaceHigh,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  errorWrap: {
-    paddingVertical: space.sm,
+  quickActionText: {
+    fontSize: 12,
+    color: COLORS.text,
+    marginLeft: 4,
+    fontWeight: '500',
+  },
+
+  // List
+  listContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexGrow: 1,
+  },
+
+  // Bubble row
+  bubbleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginVertical: 4,
+    gap: 8,
+  },
+  rowLeft: { justifyContent: 'flex-start' },
+  rowRight: { justifyContent: 'flex-end' },
+
+  // Bubble
+  bubble: {
+    maxWidth: '78%',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+  },
+  userBubble: {
+    backgroundColor: COLORS.userBubble,
+    borderBottomRightRadius: 4,
+    shadowColor: COLORS.accent,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+  },
+  aiBubble: {
+    backgroundColor: COLORS.aiBubble,
+    borderBottomLeftRadius: 4,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  errorBubble: {
+    backgroundColor: 'rgba(248,113,113,0.12)',
+    borderColor: COLORS.error,
+  },
+
+  // Text
+  msgText: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: COLORS.text,
+  },
+  boldText: {
+    fontWeight: '700',
+    color: COLORS.accentLight,
+  },
+  inlineCode: {
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    backgroundColor: 'rgba(108,99,255,0.15)',
+    color: COLORS.accentLight,
+    paddingHorizontal: 4,
+    borderRadius: 4,
+    fontSize: 13,
+  },
+  codeBlock: {
+    backgroundColor: '#0A0B10',
+    borderRadius: 10,
+    padding: 12,
+    marginVertical: 6,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  codeText: {
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontSize: 13,
+    color: '#A8FF78',
+    lineHeight: 20,
   },
   errorText: {
-    ...typography.sm,
-    color: colors.bodyOrange,
+    color: COLORS.error,
+    fontSize: 14,
+    lineHeight: 20,
   },
-  inputRow: {
+
+  // Thinking dots
+  thinkingRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.bgCharcoal,
-    borderRadius: radius.xl,
-    marginHorizontal: space.md,
-    marginBottom: space.md,
-    paddingVertical: space.xs,
-    paddingLeft: space.sm,
-    paddingRight: space.xs,
-    gap: space.xs,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
+    gap: 5,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
   },
-  inputIconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.borderDefault,
-    justifyContent: 'center',
-    alignItems: 'center',
+  thinkingDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: COLORS.textLight,
   },
-  input: {
+
+  // Input bar
+  inputBar: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 10,
+    backgroundColor: COLORS.surface,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  textInput: {
     flex: 1,
-    ...typography.base,
-    color: colors.textPrimary,
-    paddingVertical: space.sm,
-    paddingHorizontal: space.xs,
-    minHeight: 40,
+    backgroundColor: COLORS.surfaceHigh,
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingVertical: Platform.OS === 'ios' ? 12 : 8,
+    fontSize: 15,
+    color: COLORS.text,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    maxHeight: 130,
+    lineHeight: 22,
+  },
+  circleBtnWrap: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sendBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.primaryViolet,
-    justifyContent: 'center',
+    backgroundColor: COLORS.accent,
     alignItems: 'center',
-  },
-  sendBtnDisabled: {
-    opacity: 0.5,
-  },
-  centeredCard: {
-    flex: 1,
     justifyContent: 'center',
+    elevation: 4,
+    shadowColor: COLORS.accent,
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+  },
+  iconOverlay: {
+    position: 'absolute',
     alignItems: 'center',
-    paddingHorizontal: space.xl,
+    justifyContent: 'center',
+    width: 44,
+    height: 44,
   },
-  errorCardTitle: {
-    ...typography.xl,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: space.sm,
-    textAlign: 'center',
-  },
-  errorCardText: {
-    ...typography.base,
-    color: colors.textSecondary,
-    marginBottom: space.md,
-    textAlign: 'center',
-  },
-  errorCardSubtext: {
-    ...typography.sm,
-    color: colors.textTertiary,
-    marginBottom: space.lg,
-    textAlign: 'center',
-  },
-  codeBlock: {
-    backgroundColor: colors.bgCharcoal,
-    paddingVertical: space.sm,
-    paddingHorizontal: space.md,
-    borderRadius: radius.md,
-    marginBottom: space.md,
-  },
-  codeText: {
-    fontFamily: 'monospace',
-    fontSize: 14,
-    color: colors.textPrimary,
-  },
-  retryButton: {
-    backgroundColor: colors.primaryViolet,
-    paddingVertical: space.sm,
-    paddingHorizontal: space.lg,
-    borderRadius: radius.lg,
-  },
-  retryButtonText: {
-    ...typography.base,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  warmingTitle: {
-    ...typography.lg,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginTop: space.lg,
-  },
-  warmingSubtext: {
-    ...typography.sm,
-    color: colors.textSecondary,
-    marginTop: space.xs,
+  loadingBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.surfaceHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
 });

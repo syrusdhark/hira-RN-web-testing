@@ -119,8 +119,9 @@ export function TrackHomeScreen({
 
   return (
     <EnvironmentContainer
-      noPadding={activeTab === 'shop' || activeTab === 'track' || activeTab === 'profile' || activeTab === 'community'}
+      noPadding={activeTab === 'shop' || activeTab === 'track' || activeTab === 'chat' || activeTab === 'profile' || activeTab === 'community'}
       disableScroll={activeTab === 'shop' || activeTab === 'track' || activeTab === 'chat' || activeTab === 'community' || activeTab === 'profile'}
+      solidBackground={activeTab === 'chat' ? '#000000' : undefined}
       footer={<BottomTabBar tabs={TRACK_TABS} activeTab={activeTab} onTabPress={handleTabPress} />}
     >
       {renderContent()}

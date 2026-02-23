@@ -5,13 +5,16 @@ import {
   formatContextForPrompt,
   type UserContext,
 } from './ai-context.service';
-import { buildContextForQuery } from './ai/context-builder.service';
-import { optimizeForSmallModel } from './ai/context-optimizer.service';
-import * as LocalAi from './ai/local-ai.service';
 import * as ProductionAi from './ai/production-ai.service';
 import { logUsage } from './ai/cost-monitor.service';
 
 function getAiApiKey(): string {
+  const openrouter =
+    Constants.expoConfig?.extra?.openrouterApiKey ||
+    process.env.EXPO_PUBLIC_OPENROUTER_API_KEY;
+  if (typeof openrouter === 'string' && openrouter.trim().length > 0) {
+    return openrouter.trim();
+  }
   const key =
     Constants.expoConfig?.extra?.anthropicApiKey ||
     process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY;
@@ -22,29 +25,6 @@ function getAiApiKey(): string {
 function isOpenRouterKey(key: string): boolean {
   return key.startsWith('sk-or-');
 }
-
-/** True when local AI (e.g. Ollama) is enabled and URL is set. No API key required. */
-export function shouldUseLocalAi(): boolean {
-  const useLocal =
-    Constants.expoConfig?.extra?.useLocalAi ??
-    process.env.EXPO_PUBLIC_USE_LOCAL_AI;
-  const url =
-    Constants.expoConfig?.extra?.localAiUrl ??
-    process.env.EXPO_PUBLIC_LOCAL_AI_URL;
-  return useLocal === 'true' && typeof url === 'string' && url.trim().length > 0;
-}
-
-/** Shorter system prompt for small local models (e.g. phi4-mini). */
-const SHORT_SYSTEM_PROMPT = `You are Hira, a supportive wellness coach.
-
-RULES:
-- Be warm and encouraging
-- Focus on how the user FEELS
-- Keep responses under 75 words
-- Never shame or judge
-- Suggest, don't command
-
-TONE: "Let's think about..." not "You should..."`;
 
 // Primary system prompt with personality, expertise, and safety rails
 const ENHANCED_SYSTEM_PROMPT = `You are Hira, an elite personal trainer and nutrition coach integrated into the Hira fitness app.
@@ -191,51 +171,27 @@ export async function sendChatMessage(
       })),
     ];
 
-    // 5. Call the AI API (local Ollama or OpenRouter or Anthropic)
-    let assistantMessage: string;
-    let tokenCount: number | null = null;
-
-    if (shouldUseLocalAi()) {
-      const conversationHistory = messages.slice(0, -1).map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
-      const lastUserContent =
-        messages.length > 0 && messages[messages.length - 1].role === 'user'
-          ? messages[messages.length - 1].content
-          : userMessage;
-      const wellnessContext = await buildContextForQuery(userId, userMessage, 7);
-      const contextStr = optimizeForSmallModel(wellnessContext);
-      const result = await LocalAi.chat(
-        SHORT_SYSTEM_PROMPT,
-        lastUserContent,
-        contextStr,
-        conversationHistory
-      );
-      assistantMessage = result.response;
-      tokenCount = result.tokensUsed;
-    } else {
-      const apiKey = getAiApiKey();
-      if (!apiKey) {
-        throw new Error(
-          'Missing API key. Add EXPO_PUBLIC_ANTHROPIC_API_KEY to apps/mobile/.env (use an Anthropic key or an OpenRouter key) and restart the dev server.'
-        );
-      }
-      const result = await ProductionAi.chat({
-        apiKey,
-        systemPrompt: SYSTEM_PROMPT,
-        messages,
-        max_tokens: 1000,
-      });
-      assistantMessage = result.response;
-      tokenCount = result.tokensUsed;
-      await logUsage(
-        userId,
-        result.tokensUsed,
-        result.cost,
-        isOpenRouterKey(apiKey) ? 'openrouter' : 'anthropic'
+    // 5. Call the AI API (OpenRouter or Anthropic)
+    const apiKey = getAiApiKey();
+    if (!apiKey) {
+      throw new Error(
+        'Missing API key. Add EXPO_PUBLIC_OPENROUTER_API_KEY (or EXPO_PUBLIC_ANTHROPIC_API_KEY) to apps/mobile/.env and restart the dev server.'
       );
     }
+    const result = await ProductionAi.chat({
+      apiKey,
+      systemPrompt: SYSTEM_PROMPT,
+      messages,
+      maxTokens: 1000,
+    });
+    const assistantMessage = result.response;
+    const tokenCount = result.tokensUsed;
+    await logUsage(
+      userId,
+      result.tokensUsed,
+      result.cost,
+      isOpenRouterKey(apiKey) ? 'openrouter' : 'anthropic'
+    );
 
     if (!assistantMessage) {
       throw new Error(
@@ -244,13 +200,15 @@ export async function sendChatMessage(
     }
 
     // 6. Save assistant response to database
-    const modelVersion = shouldUseLocalAi() ? 'local' : 'claude-sonnet-4-20250514';
+    const modelUsed = isOpenRouterKey(apiKey)
+      ? 'deepseek/deepseek-r1-0528:free'
+      : 'claude-sonnet-4-20250514';
     const { error: saveAssistantError } = await supabase.from('ai_messages').insert({
       conversation_id: conversationId,
       role: 'assistant',
       content: assistantMessage,
       token_count: tokenCount,
-      model_version: modelVersion,
+      model_used: modelUsed,
     });
 
     if (saveAssistantError) throw saveAssistantError;

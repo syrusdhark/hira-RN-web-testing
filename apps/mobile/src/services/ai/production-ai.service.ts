@@ -53,18 +53,27 @@ async function chatOpenRouter(
     ...messages,
   ];
 
-  const response = await fetch(OPENROUTER_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: OPENROUTER_MODEL,
-      max_tokens: maxTokens,
-      messages: openRouterMessages,
-    }),
-  });
+  const OPENROUTER_FETCH_TIMEOUT_MS = 75_000;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), OPENROUTER_FETCH_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(OPENROUTER_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: OPENROUTER_MODEL,
+        max_tokens: maxTokens,
+        messages: openRouterMessages,
+      }),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   const data = (await response.json()) as {
     error?: { message?: string };

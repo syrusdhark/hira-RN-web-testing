@@ -7,7 +7,6 @@ import { supabase } from '../../lib/supabase';
 import {
   createConversation as createConversationBase,
   sendChatMessage as sendChatMessageBase,
-  shouldUseLocalAi,
 } from '../ai-chat.service';
 import { getAiConfig } from '../../config/ai.config';
 import { checkDailyLimit, getDailyUsage } from './cost-monitor.service';
@@ -37,18 +36,16 @@ export async function sendMessage(
 ): Promise<{ reply: string; conversationId: string }> {
   const id = conversationId ?? (await createConversationBase(userId));
 
-  if (!shouldUseLocalAi()) {
-    const config = getAiConfig();
-    const limit = config.dailyLimit ?? 10_000;
-    if (limit > 0) {
-      const withinLimit = await checkDailyLimit(userId, limit);
-      if (!withinLimit) {
-        const e = new Error(
-          `You've reached your daily limit (${limit.toLocaleString()} tokens). Try again tomorrow.`
-        ) as Error & { code?: string };
-        e.code = DAILY_LIMIT_REACHED;
-        throw e;
-      }
+  const config = getAiConfig();
+  const limit = config.dailyLimit ?? 10_000;
+  if (limit > 0) {
+    const withinLimit = await checkDailyLimit(userId, limit);
+    if (!withinLimit) {
+      const e = new Error(
+        `You've reached your daily limit (${limit.toLocaleString()} tokens). Try again tomorrow.`
+      ) as Error & { code?: string };
+      e.code = DAILY_LIMIT_REACHED;
+      throw e;
     }
   }
 
@@ -57,11 +54,11 @@ export async function sendMessage(
 }
 
 /**
- * Usage for today (production API only). For local AI, returns zeros / no limit.
+ * Usage for today (production API).
  */
 export async function getUserUsage(userId: string): Promise<UserUsage> {
   const config = getAiConfig();
-  const limit = config.provider === 'local' ? 0 : (config.dailyLimit ?? 10_000);
+  const limit = config.dailyLimit ?? 10_000;
 
   if (limit <= 0) {
     return { tokensUsed: 0, limit: 0, limitReached: false };
@@ -128,4 +125,3 @@ export async function getConversationHistory(
 
 // Re-export for consumers that need to create a conversation without sending
 export { createConversationBase as createConversation } from '../ai-chat.service';
-export { shouldUseLocalAi } from '../ai-chat.service';

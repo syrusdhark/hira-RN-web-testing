@@ -12,19 +12,11 @@ if (fs.existsSync(envPath)) {
       process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY = value;
       return;
     }
-    match = line.match(/^EXPO_PUBLIC_USE_LOCAL_AI=(.+)$/);
+    match = line.match(/^EXPO_PUBLIC_OPENROUTER_API_KEY=(.+)$/);
     if (match) {
-      process.env.EXPO_PUBLIC_USE_LOCAL_AI = match[1].trim().replace(/^["']|["']$/g, '');
+      const value = match[1].trim().replace(/^["']|["']$/g, '');
+      process.env.EXPO_PUBLIC_OPENROUTER_API_KEY = value;
       return;
-    }
-    match = line.match(/^EXPO_PUBLIC_LOCAL_AI_URL=(.+)$/);
-    if (match) {
-      process.env.EXPO_PUBLIC_LOCAL_AI_URL = match[1].trim().replace(/^["']|["']$/g, '');
-      return;
-    }
-    match = line.match(/^EXPO_PUBLIC_LOCAL_AI_MODEL=(.+)$/);
-    if (match) {
-      process.env.EXPO_PUBLIC_LOCAL_AI_MODEL = match[1].trim().replace(/^["']|["']$/g, '');
     }
   });
 }
@@ -37,9 +29,7 @@ module.exports = {
     extra: {
       ...appJson.expo.extra,
       anthropicApiKey: process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY || '',
-      useLocalAi: process.env.EXPO_PUBLIC_USE_LOCAL_AI || '',
-      localAiUrl: process.env.EXPO_PUBLIC_LOCAL_AI_URL || '',
-      localAiModel: process.env.EXPO_PUBLIC_LOCAL_AI_MODEL || '',
+      openrouterApiKey: process.env.EXPO_PUBLIC_OPENROUTER_API_KEY || '',
     },
   },
 };

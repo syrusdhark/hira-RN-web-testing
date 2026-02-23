@@ -151,14 +151,19 @@ EXPO_PUBLIC_ANTHROPIC_API_KEY=your_anthropic_api_key_here
 - For production, API keys should be managed through a secure backend service
 - You can obtain an Anthropic API key from [console.anthropic.com](https://console.anthropic.com/)
 
-### 3. Supabase Configuration
+### 3. AI (Hira chat)
+
+- The app uses **OpenRouter** with model `deepseek/deepseek-r1-0528:free`. Set `EXPO_PUBLIC_OPENROUTER_API_KEY` in `apps/mobile/.env` to your OpenRouter API key. Usage is logged to Supabase and a daily token limit is enforced.
+- Optional: set `EXPO_PUBLIC_ANTHROPIC_API_KEY` (Anthropic key, `sk-ant-...`) to use Anthropic instead of OpenRouter.
+
+### 4. Supabase Configuration
 
 The app uses Supabase for backend services. The Supabase configuration is located in:
 - `src/lib/supabase.ts`
 
 You may need to update the Supabase URL and anon key if you're setting up your own instance.
 
-### 4. Android SDK Configuration
+### 5. Android SDK Configuration
 
 The Android SDK path is configured in `apps/mobile/android/local.properties`:
 
@@ -472,7 +477,7 @@ If you encounter issues not covered here:
 The app uses Supabase (PostgreSQL) with the following main tables:
 
 - **Authentication**: `auth.users` (Supabase Auth)
-- **AI**: `ai_conversations`, `ai_messages`, `ai_memory_snapshots`
+- **AI**: `ai_conversations`, `ai_messages`, `ai_memory_snapshots`, `ai_usage_logs`
 - **Workouts**: `workout_programs`, `workout_templates`, `workout_sessions`, `exercises`
 - **Nutrition**: `foods`, `meals`, `meal_items`, `nutrition_daily_summary`
 - **Profile**: `profiles`, `user_health_profile`, `body_weight_logs`

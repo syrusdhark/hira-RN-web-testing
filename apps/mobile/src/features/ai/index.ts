@@ -10,7 +10,6 @@ export {
   getUserConversations,
   getConversationHistory,
   createConversation,
-  shouldUseLocalAi,
   DAILY_LIMIT_REACHED,
 } from '../../services/ai';
 export type { UserUsage, ConversationSummary, HistoryMessage } from '../../services/ai';

@@ -1,6 +1,6 @@
 import Constants from 'expo-constants';
 
-export type AiProvider = 'local' | 'anthropic' | 'openrouter';
+export type AiProvider = 'anthropic' | 'openrouter';
 
 export interface AiConfig {
   provider: AiProvider;
@@ -10,45 +10,38 @@ export interface AiConfig {
   dailyLimit?: number;
 }
 
-const DEFAULT_MODEL_LOCAL = 'phi4-mini:latest';
+const OPENROUTER_MODEL = 'deepseek/deepseek-r1-0528:free';
 const DEFAULT_MODEL_ANTHROPIC = 'claude-sonnet-4-20250514';
 const DEFAULT_MAX_TOKENS = 1024;
 
 /**
- * Returns current AI config based on env. Use when you need to know provider or limits
- * (e.g. for UI or rate limiting). Chat routing itself is in ai-chat.service (shouldUseLocalAi).
+ * Returns current AI config based on env. Use for UI or rate limiting.
  */
 export function getAiConfig(): AiConfig {
-  const useLocal =
-    Constants.expoConfig?.extra?.useLocalAi ??
-    process.env.EXPO_PUBLIC_USE_LOCAL_AI;
-  const url =
-    Constants.expoConfig?.extra?.localAiUrl ??
-    process.env.EXPO_PUBLIC_LOCAL_AI_URL;
-  const localEnabled =
-    useLocal === 'true' && typeof url === 'string' && url.trim().length > 0;
+  const openrouterKey =
+    Constants.expoConfig?.extra?.openrouterApiKey ??
+    process.env.EXPO_PUBLIC_OPENROUTER_API_KEY;
+  const hasOpenRouter =
+    typeof openrouterKey === 'string' && openrouterKey.trim().length > 0;
 
-  if (localEnabled) {
-    const model =
-      Constants.expoConfig?.extra?.localAiModel ??
-      process.env.EXPO_PUBLIC_LOCAL_AI_MODEL ??
-      DEFAULT_MODEL_LOCAL;
+  if (hasOpenRouter) {
     return {
-      provider: 'local',
-      model: typeof model === 'string' ? model : DEFAULT_MODEL_LOCAL,
+      provider: 'openrouter',
+      model: OPENROUTER_MODEL,
       maxTokens: DEFAULT_MAX_TOKENS,
+      dailyLimit: __DEV__ ? 1000 : 10000,
     };
   }
 
-  const apiKey =
+  const anthropicKey =
     Constants.expoConfig?.extra?.anthropicApiKey ??
     process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY;
-  const isOpenRouter =
-    typeof apiKey === 'string' && apiKey.trim().startsWith('sk-or-');
+  const hasAnthropic =
+    typeof anthropicKey === 'string' && anthropicKey.trim().startsWith('sk-ant-');
 
   return {
-    provider: isOpenRouter ? 'openrouter' : 'anthropic',
-    model: DEFAULT_MODEL_ANTHROPIC,
+    provider: hasAnthropic ? 'anthropic' : 'openrouter',
+    model: hasAnthropic ? DEFAULT_MODEL_ANTHROPIC : OPENROUTER_MODEL,
     maxTokens: DEFAULT_MAX_TOKENS,
     dailyLimit: __DEV__ ? 1000 : 10000,
   };
