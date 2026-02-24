@@ -68,7 +68,7 @@ export function CommunityPostCard({
         <View style={styles.authorRow}>
           <Pressable style={styles.avatarWrap}>
             {item.author_avatar_url ? (
-              <Image source={{ uri: item.author_avatar_url }} style={styles.avatar} />
+              <Image source={{ uri: item.author_avatar_url }} style={styles.avatar} fadeDuration={0} />
             ) : (
               <View style={[styles.avatar, styles.avatarPlaceholder]}>
                 <MaterialCommunityIcons name="account" size={20} color={colors.textTertiary} />
@@ -106,7 +106,7 @@ export function CommunityPostCard({
       {firstMedia ? (
         <View style={styles.mediaShadowWrap}>
           <View style={[styles.mediaWrap, { width: mediaWidth, height: mediaHeight }]}>
-            <Image source={{ uri: firstMedia }} style={styles.media} resizeMode="cover" />
+            <Image source={{ uri: firstMedia }} style={styles.media} resizeMode="cover" fadeDuration={0} />
             {isVideo && (
               <View style={styles.playOverlay}>
                 <MaterialCommunityIcons name="play-circle" size={56} color="rgba(255,255,255,0.9)" />

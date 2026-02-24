@@ -13,7 +13,7 @@ export const OLLAMA_API_CONFIG = {
 };
 
 /**
- * Send a message to Local Ollama.
+ * Send a message to Local Ollama. 
  * @param messages Full conversation history
  * @param onStream Called with each streamed text chunk
  * @returns Full assistant reply

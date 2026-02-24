@@ -172,7 +172,7 @@ export default function App() {
 
   if (hasSeenWelcomeSplash === null) {
     return (
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bgMidnight }}>
         <View style={{ flex: 1, backgroundColor: colors.bgMidnight, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color={colors.primaryViolet} />
         </View>
@@ -182,7 +182,7 @@ export default function App() {
 
   if (hasSeenWelcomeSplash === false) {
     return (
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bgMidnight }}>
         <StatusBar style="light" />
         <WelcomeSplashScreen
           onComplete={async () => {
@@ -196,7 +196,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bgMidnight }}>
         <View style={{ flex: 1, backgroundColor: colors.bgMidnight, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color={colors.primaryViolet} />
         </View>
@@ -206,7 +206,7 @@ export default function App() {
 
   if (!session) {
     return (
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bgMidnight }}>
         <QueryClientProvider client={queryClient}>
           <CartProvider>
             <StatusBar style="light" />
@@ -224,7 +224,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bgMidnight }}>
         <QueryClientProvider client={queryClient}>
           <CartProvider>
             <ProfileProvider>

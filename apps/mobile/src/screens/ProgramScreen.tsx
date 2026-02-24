@@ -190,10 +190,12 @@ export function ProgramScreen({ navigation, onStartProgramDay, onViewProgramDay,
                   : '—';
             return (
               <View key={ex.id} style={styles.dropdownExercise}>
-                <Text style={styles.dropdownExerciseName} numberOfLines={1}>
-                  {ex.exercise_name ?? '--'}
-                </Text>
-                <Text style={styles.dropdownSetText}>{setsRepsText}</Text>
+                <View style={styles.dropdownExerciseRow}>
+                  <Text style={styles.dropdownExerciseName} numberOfLines={1}>
+                    {ex.exercise_name ?? '--'}
+                  </Text>
+                  <Text style={styles.dropdownSetText}>{setsRepsText}</Text>
+                </View>
               </View>
             );
           })
@@ -203,7 +205,7 @@ export function ProgramScreen({ navigation, onStartProgramDay, onViewProgramDay,
             style={({ pressed }) => [styles.dropdownButton, styles.dropdownButtonSecondary, pressed && { opacity: 0.8 }]}
             onPress={() => handleViewDay(day)}
           >
-            <Text style={styles.dropdownButtonSecondaryText}>View</Text>
+            <Text style={styles.dropdownButtonSecondaryText}>Start</Text>
           </Pressable>
         </View>
       </View>
@@ -218,7 +220,10 @@ export function ProgramScreen({ navigation, onStartProgramDay, onViewProgramDay,
     const canTap = (hasTemplate && !isCompleted) || (!day.templateId && !day.is_rest_day);
     const isExpanded = expandedDayId === day.id;
 
-    const label = DAY_NAMES[(day.day_number ?? 1) - 1] ?? 'DAY';
+    const programDayIndex = ((day.week_number ?? 1) - 1) * 7 + (day.day_number ?? 1);
+    const weekdayRaw = DAY_NAMES[(day.day_number ?? 1) - 1] ?? 'DAY';
+    const weekdayTitleCase = weekdayRaw.charAt(0) + weekdayRaw.slice(1).toLowerCase();
+    const label = `Day ${programDayIndex} ${weekdayTitleCase}`;
 
     const renderMiddle = () => {
       if (day.is_rest_day) {
@@ -232,22 +237,20 @@ export function ProgramScreen({ navigation, onStartProgramDay, onViewProgramDay,
         );
       }
       return (
-        <View style={styles.templateTitleRow}>
-          <LinearGradient
-            colors={['#424242', '#18181b']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={styles.templateRectangle}
-          >
-            <Text style={styles.templateRectangleText} numberOfLines={1}>{templateTitle}</Text>
-          </LinearGradient>
+        <LinearGradient
+          colors={['#424242', '#18181b']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={styles.templateRectangle}
+        >
+          <Text style={styles.templateRectangleText} numberOfLines={1}>{templateTitle}</Text>
           <MaterialCommunityIcons
             name={isExpanded ? 'chevron-up' : 'chevron-down'}
             size={20}
             color={colors.textSecondary}
             style={styles.templateChevron}
           />
-        </View>
+        </LinearGradient>
       );
     };
 
@@ -487,9 +490,8 @@ const styles = StyleSheet.create({
     gap: space.xs,
   },
   programTitle: {
-    ...typography['2xl'],
+    ...typography.xl,
     color: colors.textPrimary,
-    fontSize: 24,
     marginBottom: 4,
   },
   content: {
@@ -598,10 +600,12 @@ const styles = StyleSheet.create({
   },
   templateRectangle: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     alignSelf: 'stretch',
     paddingHorizontal: space.md,
     paddingVertical: space.sm,
-    borderRadius: 4,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
   },
@@ -609,11 +613,7 @@ const styles = StyleSheet.create({
     ...typography.sm,
     color: colors.textPrimary,
     fontWeight: '600',
-  },
-  templateTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'stretch',
+    flex: 1,
   },
   templateChevron: {
     marginLeft: space.xs,
@@ -641,17 +641,20 @@ const styles = StyleSheet.create({
   dropdownExercise: {
     marginBottom: space.sm,
   },
+  dropdownExerciseRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+  },
   dropdownExerciseName: {
     ...typography.sm,
     color: colors.textPrimary,
     fontWeight: '600',
-    marginBottom: 2,
+    flex: 1,
   },
   dropdownSetText: {
     ...typography.xs,
     color: colors.textSecondary,
-    marginLeft: space.sm,
-    marginTop: 2,
   },
   dropdownActions: {
     flexDirection: 'row',

@@ -102,6 +102,7 @@ export function WelcomeSplashScreen({ onComplete }: WelcomeSplashScreenProps) {
             source={require('../../assets/hira-logo.png')}
             style={styles.logo}
             resizeMode="contain"
+            fadeDuration={0}
             accessibilityLabel="Hira logo"
           />
         </Animated.View>
@@ -130,6 +131,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'space-between',
+    backgroundColor: colors.bgMidnight,
   },
   content: {
     flex: 1,

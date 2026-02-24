@@ -135,7 +135,7 @@ export function WorkoutInsightsScreen({
         </View>
         <EnvironmentContainer>
           <Section spacing="md">
-            <Text style={styles.emptyText}>No workout logged for today. Log a session to see muscle intensity.</Text>
+            <Text style={styles.emptyText}>No workout logged for today. Log a session to see muscle impact.</Text>
           </Section>
         </EnvironmentContainer>
       </View>
@@ -154,7 +154,7 @@ export function WorkoutInsightsScreen({
         </View>
         <EnvironmentContainer>
           <Section spacing="md">
-            <Text style={styles.emptyText}>No muscle intensity data for today's exercises.</Text>
+            <Text style={styles.emptyText}>No muscle impact data for today's exercises.</Text>
           </Section>
         </EnvironmentContainer>
       </View>
@@ -205,7 +205,7 @@ export function WorkoutInsightsScreen({
           </Section>
 
           <Section spacing="md">
-            <Text style={styles.sectionTitle}>Muscle intensity</Text>
+            <Text style={styles.sectionTitle}>Muscle impact</Text>
             {result.muscleScores.map((ms) => (
               <View key={ms.muscle} style={styles.muscleRow}>
                 <View style={styles.muscleRowTop}>

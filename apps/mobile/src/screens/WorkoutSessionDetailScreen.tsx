@@ -99,6 +99,22 @@ export function WorkoutSessionDetailScreen({
     return calc.calculateDailyIntensity(exercisesForIntensity, userProfile);
   }, [mappings, exercisesForIntensity, userProfile]);
 
+  const setsByMuscle = useMemo((): Record<string, number> => {
+    if (!session?.exercises?.length || !mappings.length) return {};
+    const out: Record<string, number> = {};
+    for (const ex of session.exercises) {
+      const normalizedName = (ex.exercise_name ?? '').toLowerCase().trim();
+      const numSets = ex.sets.length;
+      for (const m of mappings) {
+        if ((m.exercise_name ?? '').toLowerCase().trim() === normalizedName) {
+          const muscle = m.muscle_group;
+          out[muscle] = (out[muscle] ?? 0) + numSets;
+        }
+      }
+    }
+    return out;
+  }, [session?.exercises, mappings]);
+
   const paddingTop = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) + 16 : 56;
 
   if (!sessionId) {
@@ -166,19 +182,19 @@ export function WorkoutSessionDetailScreen({
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Muscle intensity</Text>
+        <Text style={styles.sectionTitle}>Muscle impact</Text>
         {mappings.length === 0 ? (
-          <Text style={styles.muscleUnavailable}>Muscle intensity not available.</Text>
+          <Text style={styles.muscleUnavailable}>Muscle impact not available.</Text>
         ) : session.exercises.length === 0 ? (
           <Text style={styles.muscleUnavailable}>No exercises in this session.</Text>
         ) : !intensityResult || intensityResult.muscleScores.length === 0 ? (
-          <Text style={styles.muscleUnavailable}>No muscle data for these exercises.</Text>
+          <Text style={styles.muscleUnavailable}>No muscle impact data for these exercises.</Text>
         ) : (
           intensityResult.muscleScores.map((ms) => (
             <View key={ms.muscle} style={styles.muscleRow}>
               <View style={styles.muscleRowTop}>
                 <Text style={styles.muscleName} numberOfLines={1}>
-                  {formatMuscleName(ms.muscle)}
+                  {formatMuscleName(ms.muscle)} ( sets {setsByMuscle[ms.muscle] ?? 0} )
                 </Text>
                 <View style={[styles.muscleBadge, { backgroundColor: categoryColor(ms.category) + '22' }]}>
                   <Text style={[styles.muscleBadgeText, { color: categoryColor(ms.category) }]}>
@@ -198,7 +214,10 @@ export function WorkoutSessionDetailScreen({
 
         <Text style={styles.sectionTitle}>Exercises ({session.exercises.length})</Text>
 
-        {session.exercises.map((ex) => (
+        {session.exercises.map((ex) => {
+          const showRest = ex.sets.some((s) => s.rest_seconds != null);
+          const showRIR = ex.sets.some((s) => s.rir != null);
+          return (
           <View key={ex.id} style={styles.exerciseBlock}>
             <Text style={styles.exerciseName}>{ex.exercise_name ?? '--'}</Text>
             <View style={styles.setsTable}>
@@ -206,16 +225,16 @@ export function WorkoutSessionDetailScreen({
                 <Text style={[styles.setCell, styles.setCellHeader]}>Set</Text>
                 <Text style={[styles.setCell, styles.setCellHeader]}>Reps</Text>
                 <Text style={[styles.setCell, styles.setCellHeader]}>Weight</Text>
-                <Text style={[styles.setCell, styles.setCellHeader]}>Rest</Text>
-                <Text style={[styles.setCell, styles.setCellHeader]}>RIR</Text>
+                {showRest && <Text style={[styles.setCell, styles.setCellHeader]}>Rest</Text>}
+                {showRIR && <Text style={[styles.setCell, styles.setCellHeader]}>RIR</Text>}
               </View>
               {ex.sets.map((set) => (
                 <View key={set.id} style={styles.setRow}>
                   <Text style={styles.setCell}>{set.set_number}</Text>
                   <Text style={styles.setCell}>{set.reps != null ? set.reps : '—'}</Text>
                   <Text style={styles.setCell}>{set.weight != null ? `${set.weight} kg` : '—'}</Text>
-                  <Text style={styles.setCell}>{set.rest_seconds != null ? `${set.rest_seconds}s` : '—'}</Text>
-                  <Text style={styles.setCell}>{set.rir != null ? set.rir : '—'}</Text>
+                  {showRest && <Text style={styles.setCell}>{set.rest_seconds != null ? `${set.rest_seconds}s` : '—'}</Text>}
+                  {showRIR && <Text style={styles.setCell}>{set.rir != null ? set.rir : '—'}</Text>}
                 </View>
               ))}
             </View>
@@ -228,7 +247,8 @@ export function WorkoutSessionDetailScreen({
               </View>
             )}
           </View>
-        ))}
+          );
+        })}
 
         <View style={styles.bottomSpacer} />
       </ScrollView>

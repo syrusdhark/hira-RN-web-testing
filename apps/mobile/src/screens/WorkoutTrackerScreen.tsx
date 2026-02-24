@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -66,11 +66,36 @@ export function WorkoutTrackerScreen({
   const mainStreak = streaks.find((s) => s.streak_type === 'workout' || s.streak_type === 'overall');
   const streakDisplay = streaksLoading ? '--' : String(mainStreak?.current_streak ?? 0);
   const { data: scheduleData } = useProgramSchedule();
-  const moveCardTitle = scheduleData?.program?.title?.trim()
-    ? scheduleData.program.title
-    : 'Create your own program';
-  const { data, isLoading } = useWorkoutTemplates();
-  const templates = (data ?? []).slice(0, 5);
+  const { data: templatesData, isLoading } = useWorkoutTemplates();
+  const templateTitleById = useMemo(() => {
+    const list = templatesData ?? [];
+    return list.reduce((acc: Record<string, string>, t: { id?: string; title?: string }) => {
+      if (t?.id != null && t?.title != null) acc[t.id] = t.title;
+      return acc;
+    }, {});
+  }, [templatesData]);
+  const todaySlot =
+    scheduleData?.todayWeekNumber != null && scheduleData?.todayWeekday != null
+      ? scheduleData.scheduleByWeek[scheduleData.todayWeekNumber]?.find(
+          (d) => d.day_number === scheduleData.todayWeekday
+        )
+      : undefined;
+  const dayLabel = todaySlot
+    ? (todaySlot.templateId && templateTitleById[todaySlot.templateId])
+      ? templateTitleById[todaySlot.templateId]
+      : (todaySlot.title?.trim() && todaySlot.title.trim().toLowerCase() !== 'workout')
+        ? todaySlot.title.trim()
+        : 'Select workout'
+    : '';
+  const moveCardDayWeekLine = todaySlot
+    ? `Day ${(todaySlot.week_number - 1) * 7 + todaySlot.day_number} of Week ${todaySlot.week_number}`
+    : null;
+  const moveCardTitle = todaySlot
+    ? dayLabel
+    : scheduleData?.program?.title?.trim()
+      ? scheduleData.program.title
+      : 'Create your own program';
+  const templates = (templatesData ?? []).slice(0, 5);
   const { data: exercisesList = [], isLoading: exercisesLoading } = useExercises();
   const exercisesCarouselSlice = exercisesList.slice(0, 12);
 
@@ -104,6 +129,7 @@ export function WorkoutTrackerScreen({
             title="MOVE"
             onPress={onNavigateToProgram}
             workoutName={moveCardTitle}
+            dayWeekLabel={moveCardDayWeekLine}
             hideSubtitle
             hideCta
           />
@@ -163,6 +189,7 @@ export function WorkoutTrackerScreen({
                     resizeMode="cover"
                     style={styles.activityTypeImageBg}
                     imageStyle={styles.activityTypeImage}
+                    fadeDuration={0}
                   >
                     <LinearGradient
                       colors={['transparent', 'rgba(0,0,0,0.8)']}
@@ -329,7 +356,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: radius.xl,
     overflow: 'hidden',
-    backgroundColor: '#fff',
+    backgroundColor: colors.bgMidnight,
   },
   activityTypeImageBg: {
     flex: 1,

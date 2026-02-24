@@ -72,6 +72,7 @@ export function TabItem({ label, icon, iconImage, activeColor, active, onPress }
             source={iconImage}
             style={[styles.tabImage, { opacity: active ? 1 : 0.6 }]}
             resizeMode="contain"
+            fadeDuration={0}
           />
         ) : (
           <MaterialCommunityIcons name={icon} size={TAB_ICON_SIZE} color={iconColor} />

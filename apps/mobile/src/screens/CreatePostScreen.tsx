@@ -85,7 +85,7 @@ export function CreatePostScreen({
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           <View style={styles.authorRow}>
             {profile?.avatar_url ? (
-              <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
+              <Image source={{ uri: profile.avatar_url }} style={styles.avatar} fadeDuration={0} />
             ) : (
               <View style={[styles.avatar, styles.avatarPlaceholder]}>
                 <MaterialCommunityIcons name="account" size={24} color={colors.textTertiary} />

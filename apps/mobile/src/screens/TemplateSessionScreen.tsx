@@ -45,6 +45,19 @@ function getWorkingSetNumber(sets: Set[], index: number): number {
     return index - lastWarmUpIndex;
 }
 
+/** True when set is a normal working set (not tagged W, F, or D). */
+function isNormalSet(set: Set): boolean {
+    return set.tag !== 'W' && set.tag !== 'F' && set.tag !== 'D';
+}
+
+/** Index of the next normal set at or after fromIndex, or null if none. */
+function getNextNormalSetIndex(sets: Set[], fromIndex: number): number | null {
+    for (let i = fromIndex; i < sets.length; i++) {
+        if (isNormalSet(sets[i])) return i;
+    }
+    return null;
+}
+
 function emptyValuesForSchema(schema: TrackingSchema): Record<string, string> {
     const values: Record<string, string> = {};
     for (const col of schema.columns) {
@@ -475,14 +488,41 @@ export function TemplateSessionScreen({
     };
 
     const toggleSetComplete = (exerciseId: string, setId: string) => {
-        setExercises(exercises.map(ex => {
-            if (ex.id === exerciseId) {
-                return {
-                    ...ex,
-                    sets: ex.sets.map(s => s.id === setId ? { ...s, completed: !s.completed } : s)
-                };
+        setExercises(prev => prev.map(ex => {
+            if (ex.id !== exerciseId) return ex;
+            const setIndex = ex.sets.findIndex(s => s.id === setId);
+            if (setIndex === -1) return ex;
+            const set = ex.sets[setIndex];
+            const willBeCompleted = !set.completed;
+
+            let newSets = ex.sets.map((s, i) =>
+                s.id === setId ? { ...s, completed: !s.completed } : s
+            );
+
+            if (willBeCompleted && isNormalSet(set)) {
+                const nextIdx = getNextNormalSetIndex(ex.sets, setIndex + 1);
+                if (nextIdx !== null) {
+                    const schema = getTrackingSchema(ex.exerciseType);
+                    const nextSet = newSets[nextIdx];
+                    const newValues = { ...nextSet.values };
+                    let changed = false;
+                    for (const col of schema.columns) {
+                        const nextVal = (newValues[col] ?? '').trim();
+                        const srcVal = (set.values?.[col] ?? '').trim();
+                        if (!nextVal && srcVal) {
+                            newValues[col] = srcVal;
+                            changed = true;
+                        }
+                    }
+                    if (changed) {
+                        newSets = newSets.map((s, i) =>
+                            i === nextIdx ? { ...s, values: newValues } : s
+                        );
+                    }
+                }
             }
-            return ex;
+
+            return { ...ex, sets: newSets };
         }));
     };
 
@@ -638,6 +678,7 @@ export function TemplateSessionScreen({
             queryClient.invalidateQueries({ queryKey: USER_XP_KEY });
             queryClient.invalidateQueries({ queryKey: USER_STREAKS_KEY });
             queryClient.invalidateQueries({ queryKey: USER_ACHIEVEMENTS_KEY });
+            await queryClient.refetchQueries({ queryKey: WORKOUT_SESSIONS_KEY });
             navigation?.goBack();
         } catch (e) {
             console.error('Finish workout error:', e);

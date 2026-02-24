@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   FlatList,
   StyleSheet,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
@@ -14,6 +15,7 @@ import {
   Pressable,
   StatusBar,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -29,7 +31,7 @@ const COLORS = {
   accentLight: '#8B84FF',
   accentGlow: 'rgba(108,99,255,0.18)',
   userBubble: '#6C63FF',
-  aiBubble: '#0a0a0a',
+  aiBubble: '#252525',
   text: '#E8E9F3',
   textMuted: '#7B7D96',
   textLight: '#FFFFFF',
@@ -227,13 +229,15 @@ export function AiChatScreen({ onNavigateToWorkout }: { onNavigateToWorkout?: ()
     {
       id: generateId(),
       role: 'assistant',
-      content: 'Hello! I am Hira, your AI assistant powered by Phi-4. How can I help you today?',
+      content: 'Hello! I\'m Hira, your AI assistant. You can log history, add workouts, create workout plans and programs, and more—with more features coming to Hira soon. How can I help you today?',
       status: 'done',
       time: formatTime(new Date()),
     },
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [showAttachOverlay, setShowAttachOverlay] = useState(false);
 
   const flatListRef = useRef<FlatList>(null);
   const streamingIdRef = useRef<string | null>(null);
@@ -242,6 +246,21 @@ export function AiChatScreen({ onNavigateToWorkout }: { onNavigateToWorkout?: ()
     setTimeout(() => {
       flatListRef.current?.scrollToEnd({ animated: true });
     }, 60);
+  }, []);
+
+  React.useEffect(() => {
+    const show = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setIsKeyboardVisible(true)
+    );
+    const hide = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setIsKeyboardVisible(false)
+    );
+    return () => {
+      show.remove();
+      hide.remove();
+    };
   }, []);
 
   const handleSendMessage = useCallback(
@@ -338,7 +357,7 @@ export function AiChatScreen({ onNavigateToWorkout }: { onNavigateToWorkout?: ()
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 56 : 0}
       >
         <FlatList
           style={{ flex: 1 }}
@@ -379,33 +398,73 @@ export function AiChatScreen({ onNavigateToWorkout }: { onNavigateToWorkout?: ()
           </ScrollView>
         )}
 
-        {/* Input Bar: Plus | TextInput | Mic or Send */}
-        <View style={[styles.inputBar, { paddingBottom: 10 + insets.bottom }]}>
-          <Pressable style={styles.circleBtnWrap} onPress={() => { }} accessibilityLabel="Attach">
-            <View style={styles.sendBtn}>
-              <MaterialCommunityIcons name="plus" size={22} color={COLORS.textLight} />
+        {/* Input Bar: single rounded input with Plus | TextInput | Mic/Send inside */}
+        <View style={[styles.inputBar, { marginTop: 10, paddingBottom: isKeyboardVisible ? 10 : 10 + insets.bottom }]}>
+          <View style={styles.inputWrapper}>
+            <View style={styles.inputLeftBtn}>
+              <Pressable style={styles.circleBtnWrap} onPress={() => setShowAttachOverlay(true)} accessibilityLabel="Attach">
+                <View style={styles.sendBtn}>
+                  <MaterialCommunityIcons name="plus" size={22} color={COLORS.textLight} />
+                </View>
+              </Pressable>
             </View>
-          </Pressable>
-          <TextInput
-            style={styles.textInput}
-            value={input}
-            onChangeText={setInput}
-            placeholder="Ask about your health..."
-            placeholderTextColor={COLORS.textMuted}
-            multiline
-            maxLength={4000}
-            returnKeyType="default"
-            blurOnSubmit={false}
-          />
-          {isLoading ? (
-            <View style={styles.loadingBtn}>
-              <ActivityIndicator size="small" color={COLORS.accentLight} />
-            </View>
-          ) : (
-            <MicOrSendButton hasText={!!input.trim()} onSend={handleSend} />
-          )}
+            <TextInput
+              style={styles.textInput}
+              value={input}
+              onChangeText={setInput}
+              placeholder="Ask me anything"
+              placeholderTextColor={COLORS.textMuted}
+              multiline
+              maxLength={4000}
+              returnKeyType="default"
+              blurOnSubmit={false}
+              textAlign="left"
+            />
+            {isLoading ? (
+              <View style={styles.loadingBtn}>
+                <ActivityIndicator size="small" color={COLORS.accentLight} />
+              </View>
+            ) : (
+              <View style={styles.inputRightBtn}>
+                <MicOrSendButton hasText={!!input.trim()} onSend={handleSend} />
+              </View>
+            )}
+          </View>
         </View>
       </KeyboardAvoidingView>
+
+      <Modal
+        visible={showAttachOverlay}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAttachOverlay(false)}
+      >
+        <Pressable style={styles.attachOverlayBackdrop} onPress={() => setShowAttachOverlay(false)}>
+          <Pressable style={styles.attachOverlayPanel} onPress={(e) => e.stopPropagation()}>
+            <Pressable
+              style={styles.attachOverlayRow}
+              onPress={() => { setShowAttachOverlay(false); }}
+            >
+              <MaterialCommunityIcons name="camera" size={22} color={COLORS.text} />
+              <Text style={styles.attachOverlayRowText}>Capture</Text>
+            </Pressable>
+            <Pressable
+              style={styles.attachOverlayRow}
+              onPress={() => { setShowAttachOverlay(false); }}
+            >
+              <MaterialCommunityIcons name="file-document-outline" size={22} color={COLORS.text} />
+              <Text style={styles.attachOverlayRowText}>Add files</Text>
+            </Pressable>
+            <Pressable
+              style={styles.attachOverlayRow}
+              onPress={() => { setShowAttachOverlay(false); }}
+            >
+              <MaterialCommunityIcons name="image-outline" size={22} color={COLORS.text} />
+              <Text style={styles.attachOverlayRowText}>Upload photo</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -447,12 +506,12 @@ const styles = StyleSheet.create({
   quickActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
+    flexGrow: 1,
+    justifyContent: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
     backgroundColor: COLORS.surface,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
   },
   quickActionPill: {
     flexDirection: 'row',
@@ -575,23 +634,40 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingHorizontal: 14,
     paddingVertical: 10,
-    gap: 10,
     backgroundColor: COLORS.surface,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+  },
+  inputWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 52,
+    maxHeight: 130,
+    backgroundColor: COLORS.surfaceHigh,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingLeft: 4,
+    paddingRight: 4,
   },
   textInput: {
     flex: 1,
-    backgroundColor: COLORS.surfaceHigh,
-    borderRadius: 24,
-    paddingHorizontal: 18,
-    paddingVertical: Platform.OS === 'ios' ? 12 : 8,
+    backgroundColor: 'transparent',
+    paddingLeft: 15,
+    paddingRight: 52,
+    paddingVertical: Platform.OS === 'ios' ? 12 : 10,
     fontSize: 15,
     color: COLORS.text,
-    borderWidth: 1,
-    borderColor: COLORS.border,
     maxHeight: 130,
     lineHeight: 22,
+    textAlign: 'left',
+  },
+  inputLeftBtn: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  inputRightBtn: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   circleBtnWrap: {
     width: 44,
@@ -627,5 +703,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  attachOverlayBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+    paddingBottom: 120,
+  },
+  attachOverlayPanel: {
+    marginHorizontal: 20,
+    backgroundColor: COLORS.surfaceHigh,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    overflow: 'hidden',
+  },
+  attachOverlayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  attachOverlayRowText: {
+    fontSize: 15,
+    color: COLORS.text,
   },
 });

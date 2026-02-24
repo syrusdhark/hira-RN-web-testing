@@ -64,7 +64,7 @@ export function CartScreen({ navigation }: { navigation: any }) {
                         <View key={item.id} style={styles.cartItem}>
                             <View style={styles.itemImageContainer}>
                                 {item.variant.product.images?.[0] ? (
-                                    <Image source={{ uri: item.variant.product.images[0] }} style={styles.itemImage} />
+                                    <Image source={{ uri: item.variant.product.images[0] }} style={styles.itemImage} fadeDuration={0} />
                                 ) : (
                                     <View style={styles.imagePlaceholder}>
                                         <MaterialCommunityIcons name="image-off" size={24} color={colors.textTertiary} />

@@ -62,22 +62,24 @@ export function EnvironmentContainer({
   }
 
   return (
-    <LinearGradient
-      colors={[colors.bgGradientTop, colors.bgGradientBottom]}
-      style={styles.root}
-    >
-      <Container
-        style={containerStyle}
-        {...containerProps}
+    <View style={[styles.root, { backgroundColor: colors.bgMidnight }]}>
+      <LinearGradient
+        colors={[colors.bgGradientTop, colors.bgGradientBottom]}
+        style={StyleSheet.absoluteFill}
       >
-        {children}
-      </Container>
-      {footer && (
-        <View style={styles.fixedFooter}>
-          {footer}
-        </View>
-      )}
-    </LinearGradient>
+        <Container
+          style={containerStyle}
+          {...containerProps}
+        >
+          {children}
+        </Container>
+        {footer && (
+          <View style={styles.fixedFooter}>
+            {footer}
+          </View>
+        )}
+      </LinearGradient>
+    </View>
   );
 }
 

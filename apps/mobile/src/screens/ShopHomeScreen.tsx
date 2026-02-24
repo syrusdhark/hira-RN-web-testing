@@ -233,7 +233,7 @@ function FeaturedCard({ product }: { product: any }) {
                     style={styles.featuredGradient}
                 >
                     {image && (
-                        <Image source={{ uri: image }} style={styles.featuredImage} resizeMode="cover" />
+                        <Image source={{ uri: image }} style={styles.featuredImage} resizeMode="cover" fadeDuration={0} />
                     )}
                     <View style={styles.featuredContent}>
                         <Text style={styles.featuredTitle} numberOfLines={2}>
@@ -282,7 +282,7 @@ function ProductCard({ product, onAddToCart }: { product: any, onAddToCart: () =
             <View style={styles.productCardContainer}>
                 <View style={styles.productImageContainer}>
                     {image ? (
-                        <Image source={{ uri: image }} style={styles.productImage} resizeMode="cover" />
+                        <Image source={{ uri: image }} style={styles.productImage} resizeMode="cover" fadeDuration={0} />
                     ) : (
                         <View style={[styles.productImage, styles.productImagePlaceholder]}>
                             <MaterialCommunityIcons name="image-off" size={32} color={colors.textTertiary} />

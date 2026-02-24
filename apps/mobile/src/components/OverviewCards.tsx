@@ -1,7 +1,18 @@
-
-import React from 'react';
-import { StyleSheet, Text, View, Pressable, Image } from 'react-native';
+import React, { type ComponentType } from 'react';
+import {
+  StyleSheet,
+  Text as RNText,
+  View as RNView,
+  Pressable as RNPressable,
+  Image as RNImage,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+
+// React 19 JSX types expect a different component shape; assert RN primitives as valid JSX components.
+const View = RNView as unknown as ComponentType<any>;
+const Text = RNText as unknown as ComponentType<any>;
+const Image = RNImage as unknown as ComponentType<any>;
+const Pressable = RNPressable as unknown as ComponentType<any>;
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, radius, space, typography } from '../theme';
 
@@ -59,6 +70,7 @@ export function NextWorkoutCard({
   onPress,
   onStartPress,
   workoutName,
+  dayWeekLabel,
   completedToday,
   durationMinutes,
   isRestDay,
@@ -71,6 +83,7 @@ export function NextWorkoutCard({
   onPress?: () => void;
   onStartPress?: () => void;
   workoutName?: string | null;
+  dayWeekLabel?: string | null;
   completedToday?: boolean;
   durationMinutes?: number | null;
   isRestDay?: boolean;
@@ -100,7 +113,7 @@ export function NextWorkoutCard({
 
   return (
     <Pressable
-      style={({ pressed }) => [
+      style={({ pressed }: { pressed: boolean }) => [
         styles.workoutShadowContainer,
         fullWidth && styles.cardFullWidth,
         pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] },
@@ -123,9 +136,16 @@ export function NextWorkoutCard({
           {title ? (
             <Text style={[styles.workoutCardTitle, { marginBottom: space.xs }]}>{title}</Text>
           ) : null}
-          <Text style={styles.moveCardProgramName} numberOfLines={2}>
-            {mainTitle}
-          </Text>
+          <View style={styles.moveCardTitleBlock}>
+            {dayWeekLabel ? (
+              <Text style={styles.moveCardDayWeekLine} numberOfLines={1}>
+                {dayWeekLabel}
+              </Text>
+            ) : null}
+            <Text style={styles.moveCardProgramName} numberOfLines={2}>
+              {mainTitle}
+            </Text>
+          </View>
           {(!hideSubtitle || !hideCta) ? (
             <View style={styles.moveCardContentRow}>
               <View style={styles.moveCardLeftColumn}>
@@ -242,12 +262,20 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1.2,
   },
-  moveCardProgramName: {
-    ...typography['2xl'],
-    fontWeight: '700',
-    color: colors.textPrimary,
+  moveCardTitleBlock: {
     alignSelf: 'flex-start',
     marginBottom: space.sm,
+  },
+  moveCardDayWeekLine: {
+    ...typography.sm,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 2,
+  },
+  moveCardProgramName: {
+    ...typography.xl,
+    fontWeight: '700',
+    color: colors.textPrimary,
   },
   moveCardContentRow: {
     flexDirection: 'row',
