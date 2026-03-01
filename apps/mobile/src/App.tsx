@@ -67,8 +67,8 @@ function AuthenticatedLayout({
     return (
       <OnboardingScreen
         onComplete={async () => {
-          resetToScreen('track');
           await refreshProfile();
+          resetToScreen('track');
         }}
       />
     );

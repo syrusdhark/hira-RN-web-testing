@@ -73,11 +73,6 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
     const [loading, setLoading] = useState(false);
 
     const onDateChange = (_event: unknown, selectedDate?: Date) => {
-        if (Platform.OS === 'android') {
-            setShowDatePicker(false);
-            if (selectedDate) setDob(selectedDate);
-            return;
-        }
         if (selectedDate) setPendingDob(selectedDate);
     };
 
@@ -86,7 +81,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
         setShowDatePicker(true);
     };
 
-    const closeDatePickerIOS = () => {
+    const closeDatePicker = () => {
         setDob(pendingDob);
         setShowDatePicker(false);
     };
@@ -258,7 +253,12 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
             <Text style={styles.subtitle}>This helps us personalize your journey.</Text>
             <View style={styles.formSection}>
                 <Text style={styles.label}>DATE OF BIRTH</Text>
-                <Pressable style={styles.inputContainer} onPress={openDatePicker}>
+                <Pressable
+                    style={styles.inputContainer}
+                    onPress={openDatePicker}
+                    accessibilityRole="button"
+                    accessibilityLabel="Select date of birth"
+                >
                     <Text style={[styles.input, { color: dob ? colors.textPrimary : colors.textTertiary, flex: 1 }]}>
                         {dob
                             ? `${dob.getDate().toString().padStart(2, '0')} / ${(dob.getMonth() + 1).toString().padStart(2, '0')} / ${dob.getFullYear()}`
@@ -266,40 +266,33 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
                     </Text>
                     <MaterialCommunityIcons name="calendar" size={20} color={colors.textTertiary} />
                 </Pressable>
-                {Platform.OS === 'ios' ? (
-                    <Modal
-                        visible={showDatePicker}
-                        transparent
-                        animationType="slide"
-                    >
-                        <Pressable
-                            style={styles.datePickerOverlay}
-                            onPress={closeDatePickerIOS}
-                        />
-                        <View style={styles.datePickerContainer}>
-                            <View style={styles.datePickerHeader}>
-                                <Pressable onPress={closeDatePickerIOS} hitSlop={16}>
-                                    <Text style={styles.datePickerDone}>Done</Text>
-                                </Pressable>
-                            </View>
-                            <DateTimePicker
-                                value={pendingDob}
-                                mode="date"
-                                display="spinner"
-                                onChange={onDateChange}
-                                maximumDate={new Date()}
+                {showDatePicker && (
+                    <Modal visible transparent animationType="slide">
+                        <View style={styles.datePickerModalWrapper}>
+                            <Pressable
+                                style={styles.datePickerOverlay}
+                                onPress={closeDatePicker}
                             />
+                            <View style={styles.datePickerContainer}>
+                                <View style={styles.datePickerHeader}>
+                                    <Pressable
+                                        onPress={closeDatePicker}
+                                        hitSlop={16}
+                                    >
+                                        <Text style={styles.datePickerDone}>Done</Text>
+                                    </Pressable>
+                                </View>
+                                <DateTimePicker
+                                    value={pendingDob}
+                                    mode="date"
+                                    display="spinner"
+                                    onChange={onDateChange}
+                                    maximumDate={new Date()}
+                                />
+                            </View>
                         </View>
                     </Modal>
-                ) : showDatePicker ? (
-                    <DateTimePicker
-                        value={dob || new Date()}
-                        mode="date"
-                        display="default"
-                        onChange={onDateChange}
-                        maximumDate={new Date()}
-                    />
-                ) : null}
+                )}
 
                 <Text style={styles.label}>GENDER</Text>
                 <View style={styles.genderList}>
@@ -653,6 +646,10 @@ const styles = StyleSheet.create({
         ...typography.lg,
         fontWeight: '700',
         color: 'white',
+    },
+    datePickerModalWrapper: {
+        flex: 1,
+        justifyContent: 'flex-end',
     },
     datePickerOverlay: {
         flex: 1,
