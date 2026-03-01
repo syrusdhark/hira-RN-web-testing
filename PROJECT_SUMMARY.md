@@ -42,8 +42,8 @@ The project is a design-system–driven mobile application focused on tracking w
 
 3. **AI Chat (Hira)**
    - **AiChatScreen**: In-app AI wellness coach tab (Hira tab in bottom nav). Deep black UI, edge-to-edge layout, greeting from Hira, small quick-action pills (Log Workout, Check Calories, I'm not well) shown only when input is empty and no user messages yet; pills hide when user types. No "Clear" button in header; no "Today HH:MM" timestamp row. Streaming replies with "thinking" state; error state in bubble. See **"AI Chat (Hira) – End-to-End"** below for full detail.
-   - **Backend**: Chat tab currently uses **local Ollama** ([local-ollama.service.ts](apps/mobile/src/services/ai/local-ollama.service.ts)) with Phi-4-mini and production system prompts from [system-prompts.ts](apps/mobile/src/services/ai/system-prompts.ts). Production path: `ai-chat.service.ts` and **AI service v2** (`services/ai/ai-chat-service-v2.ts`) — `sendMessage`, `getUserUsage`, `clearConversation`, `getConversationHistory`; daily token limit for production API; Anthropic/OpenRouter and local Ollama.
-   - **Context**: `ai-context.service.ts` and `context-builder.service.ts` build user context (profile, workout) for personalized responses; `system-prompts.ts` provides `buildContextualPrompt` to inject name, feeling, energy, recent workouts, recovery into prompts.
+   - **Backend**: Chat tab uses **Gemini 2.5 Flash Lite** via [gemini.service.ts](apps/mobile/src/services/ai/gemini.service.ts) with a single master prompt from [system-prompts.ts](apps/mobile/src/services/ai/system-prompts.ts) (`buildPrompt` + `HIRA_MASTER_PROMPT_COMPACT`). Production path: `ai-chat.service.ts` and **AI service v2** (`services/ai/ai-chat-service-v2.ts`) — `sendMessage`, `getUserUsage`, `clearConversation`, `getConversationHistory`; daily token limit for production API; Anthropic/OpenRouter.
+   - **Context**: `ai-context.service.ts` and `context-builder.service.ts` build user context (profile, workout) for personalized responses; `system-prompts.ts` provides `buildPrompt(HiraRuntimeContext)` to inject user state (name, feeling, energy, recovery) and optional surface/behaviorMode.
    - **Persistence**: Production path uses Supabase (`ai_messages`, `ai_conversations`, `ai_usage_logs`). Local Ollama chat is in-memory only (no persistence in current implementation).
 
 4. **Workout Tracking**
@@ -139,7 +139,7 @@ graph TD
 | workout | WorkoutTrackerScreen | Custom (View + ScrollView) | useProgramSchedule, useWorkoutTemplates, useUserStreaks |
 | profile | ProfileScreen | EnvironmentContainer + ScreenHeader + Section | ProfileContext |
 | shop (tab) | ShopHomeScreen | EnvironmentContainer + ScreenHeader | useShopProducts, CartContext |
-| chat (tab) | AiChatScreen | EnvironmentContainer (noPadding, solidBackground black) + custom chat layout | local-ollama.service, system-prompts.ts; see "AI Chat (Hira) – End-to-End" |
+| chat (tab) | AiChatScreen | EnvironmentContainer (noPadding, solidBackground black) + custom chat layout | gemini.service, system-prompts.ts; see "AI Chat (Hira) – End-to-End" |
 | community (tab) | CommunityScreen | EnvironmentContainer + Section | useCommunityFeed, useCommunityActions |
 | program | ProgramScreen | EnvironmentContainer + ScreenHeader + Section | useProgramSchedule |
 | program-create | CreateProgramScreen | EnvironmentContainer + Section | useCreateProgram, useWorkoutTemplates |
@@ -160,7 +160,7 @@ graph TD
 
 ## AI Chat (Hira) – End-to-End
 
-This section describes the AI wellness chat feature in full: where it lives, how the screen is built, the complete system prompt set, and how the local Ollama pipeline works.
+This section describes the AI wellness chat feature in full: where it lives, how the screen is built, the master prompt architecture, and how the Gemini pipeline works.
 
 ### Where It Lives in the App
 
@@ -183,9 +183,9 @@ This section describes the AI wellness chat feature in full: where it lives, how
 
 **State**:
 
-- `messages`: array of `{ id, role, content, status?, time }`. Initial message is one assistant message: "Hello! I am Hira, your AI assistant powered by Phi-4. How can I help you today?" with status `'done'`.
+- `messages`: array of `{ id, role, content, status?, time }`. Initial message is one assistant message (Hira greeting) with status `'done'`.
 - `input`: current input text.
-- `isLoading`: true while waiting for Ollama stream.
+- `isLoading`: true while waiting for Gemini stream.
 - Refs: `flatListRef` (scroll to end), `streamingIdRef` (current streaming message id).
 
 **Send flow**:
@@ -193,7 +193,7 @@ This section describes the AI wellness chat feature in full: where it lives, how
 1. User taps send (or equivalent); `handleSend` runs.
 2. Trimmed input is appended as a user message; a placeholder assistant message with `status: 'thinking'` is appended; list scrolls to end.
 3. `history` is built from `messages` + new user message as `{ role, content }[]` (user/assistant only).
-4. `sendOllamaMessage(history, onStream)` is called. Each streamed chunk updates the placeholder message content; when stream ends, status set to `'done'`. On error, that message gets `status: 'error'` and error text.
+4. `sendGeminiMessage({ messages: history, onStream })` is called. Each streamed chunk updates the placeholder message content; when stream ends, status set to `'done'`. On error, that message gets `status: 'error'` and error text.
 
 **UI components (internal)**:
 
@@ -207,60 +207,20 @@ This section describes the AI wellness chat feature in full: where it lives, how
 
 **File**: [apps/mobile/src/services/ai/system-prompts.ts](apps/mobile/src/services/ai/system-prompts.ts)
 
-The chat tab uses the **Phi-4–optimized** prompt for local Ollama (Phi-4-mini). The file also defines a full set of Hira prompts and helpers for production or query-type routing.
+The chat tab uses a **single master prompt** architecture: one identity, structured context, no query-type routing.
 
-**Prompt currently in use (Ollama)** — `PHI4_OPTIMIZED_PROMPT`:
+- **HIRA_MASTER_PROMPT**: Full Hira identity (calm, emotionally intelligent wellness companion); role (supportive, reflection before instruction, options not commands, no medical diagnosis); primary behavior (acknowledge emotion first, use context, 1–3 next steps, under ~180 words, one voice); decision logic (emotional distress → validate; workout → energy + recovery; insights → summarize; unclear → one question); constraints (no medical advice, no push through pain, no shame).
+- **HIRA_MASTER_PROMPT_COMPACT**: Same content, shortened and bulletized for **Gemini 2.5 Flash Lite**; used as system instructions in AI Studio and in production.
+- **buildPrompt(context, options)**: Builds the full system prompt from `HiraRuntimeContext` (user.name, user.feeling, user.energy, user.recovery; optional intent, surface, behaviorMode). Appends CURRENT USER STATE and optional INTERACTION CONTEXT and RESPONSE MODE. `options.useCompact` selects compact variant (default true).
+- **wellnessToRuntimeContext(w, overrides)**: Maps `WellnessContext` to `HiraRuntimeContext` for use with `buildPrompt`.
 
-```
-You are Hira, a wellness AI coach.
+### Gemini Integration
 
-Core rules:
-1. Focus on FEELINGS first (how user feels > what they did)
-2. Use "we" not "you should"
-3. Keep responses under 75 words
-4. Acknowledge their state before suggesting
-5. Offer 2-3 options, never commands
-6. Never shame, judge, or push through pain
-7. If medical concern: "Worth checking with a doctor"
+**File**: [apps/mobile/src/services/ai/gemini.service.ts](apps/mobile/src/services/ai/gemini.service.ts)
 
-Tone: Supportive friend who listens and validates.
-
-Principles:
-- Rest = progress
-- Listen to body signals
-- Sustainable > optimal
-- Every body is different
-
-You have context about their workouts, feelings, and recovery. Use it to personalize guidance.
-
-Be warm, brief, and helpful.
-```
-
-**Full prompt set** — `HIRA_SYSTEM_PROMPTS`:
-
-- **wellness_coach**: Full Hira identity (supportive, feelings-first, "we" language, no judgment); wellness principles (rest = progress, sustainable > optimal, etc.); capabilities (workout history, feelings, recovery); response style (under 100 words, 2–3 options, acknowledge first); critical constraints (no medical advice, no push through pain, no strict meal plans, no aggressive language); example good/bad tone; reminder to be a supportive companion.
-- **simple**: Short variant — supportive wellness AI, focus on feelings, "we" language, under 50 words, never medical advice.
-- **workout_guidance**: Workout decisions; access to recent workouts, energy/feeling scores, recovery; suggest by how they feel today; offer rest option; 2–3 options; under 80 words.
-- **recovery**: Rest and recovery; validate feelings; rest days = progress; light alternatives; under 60 words.
-- **emotional_support**: Emotional support around wellness; listen and validate; do not provide therapy or diagnose; suggest professional support when appropriate; under 80 words.
-- **insights**: Progress insights from workout frequency, feelings over time, movement preferences, recovery; data-informed but human; under 70 words.
-
-**Helpers**:
-
-- `getSystemPrompt(queryType)`: Returns one of the above by `queryType` (`'workout' | 'recovery' | 'emotional' | 'insights' | 'simple' | 'general'`). Default `'general'` returns `wellness_coach`.
-- `buildContextualPrompt(basePrompt, userContext)`: Appends a "CURRENT USER CONTEXT" block to a base prompt. `userContext`: `{ name, todayFeeling?, todayEnergy?, recentWorkouts?, recoveryStatus? }`. Used to inject user data when context is available (e.g. production or when wiring context into Ollama).
-
-### Local Ollama Integration
-
-**File**: [apps/mobile/src/services/ai/local-ollama.service.ts](apps/mobile/src/services/ai/local-ollama.service.ts)
-
-- **Config**: `OLLAMA_API_CONFIG` — `baseUrl` (e.g. `http://192.168.29.33:11434/v1/chat/completions`), `model: 'phi4-mini:latest'`, `maxTokens: 4096`, `temperature: 0.7`, `systemPrompt: PHI4_OPTIMIZED_PROMPT` (from system-prompts.ts).
-- **API**: `sendOllamaMessage(messages, onStream)`.
-  - `messages`: array of `{ role, content }` (user/assistant only; no system role in this array).
-  - Request body: `model`, `messages: [{ role: 'system', content: OLLAMA_API_CONFIG.systemPrompt }, ...messages]`, `max_tokens`, `temperature`, `stream: true`.
-  - Uses `react-native-sse` `EventSource` with POST, JSON body, headers `Content-Type`, `HTTP-Referer`, `X-Title`.
-  - Parses SSE chunks for `choices[0].delta.content`; accumulates and calls `onStream(delta)` per chunk; resolves with full content on `[DONE]` or close; rejects on error with message.
-- **Flow**: AiChatScreen builds `history` from current messages + new user message, calls `sendOllamaMessage(history, (delta) => update streaming message)`, and updates UI on stream and completion/error.
+- **Config**: API key from `EXPO_PUBLIC_GEMINI_API_KEY`; model `gemini-2.5-flash-lite`; temperature ~0.65 for chat; maxTokens 2048.
+- **API**: `sendGeminiMessage({ messages, context?, onStream?, config? })`. System instructions come from `buildPrompt(context ?? { user: { name: 'User' } }, { useCompact: true })`. Supports streaming via `onStream`.
+- **Flow**: AiChatScreen builds `history`, calls `sendGeminiMessage({ messages: history, onStream })`, and updates UI on stream and completion/error.
 
 ### Data Flow (AI Chat tab)
 
@@ -268,13 +228,11 @@ Be warm, brief, and helpful.
 flowchart LR
   User[User types and sends] --> AiChat[AiChatScreen handleSend]
   AiChat --> History[Build history array]
-  History --> Ollama[sendOllamaMessage]
-  Ollama --> System[system prompt from system-prompts.ts]
-  System --> Ollama
-  Ollama --> SSE[EventSource POST stream]
-  SSE --> OllamaSvc[Ollama server Phi-4-mini]
-  OllamaSvc --> SSE
-  SSE --> OnStream[onStream delta]
+  History --> Gemini[sendGeminiMessage]
+  Gemini --> Build[buildPrompt from system-prompts.ts]
+  Build --> Gemini
+  Gemini --> API[Gemini API stream]
+  API --> OnStream[onStream delta]
   OnStream --> AiChat
   AiChat --> FlatList[FlatList update bubble]
 ```
@@ -285,7 +243,7 @@ flowchart LR
 |--------|------|
 | Chat UI | [AiChatScreen.tsx](apps/mobile/src/screens/AiChatScreen.tsx) |
 | System prompts | [system-prompts.ts](apps/mobile/src/services/ai/system-prompts.ts) |
-| Local Ollama client | [local-ollama.service.ts](apps/mobile/src/services/ai/local-ollama.service.ts) |
+| Gemini client | [gemini.service.ts](apps/mobile/src/services/ai/gemini.service.ts) |
 | Tab shell / chat tab | [TrackHomeScreen.tsx](apps/mobile/src/screens/TrackHomeScreen.tsx) |
 | Container (noPadding, solidBackground) | [EnvironmentContainer.tsx](apps/mobile/src/components/EnvironmentContainer.tsx) |
 | Context building (for future use) | [context-builder.service.ts](apps/mobile/src/services/ai/context-builder.service.ts), [context-formatter.service.ts](apps/mobile/src/services/ai/context-formatter.service.ts) |
@@ -355,7 +313,7 @@ hira-ai-app-capacitor/
                                # CartScreen, ProfileScreen, PersonalInfoScreen, CommunityScreen,
                                # CreatePostScreen, ActivityTypeWorkoutsScreen, ExercisesScreen, ...
         services/              # ai-chat.service.ts, ai-context.service.ts,
-                               # ai/system-prompts.ts, ai/local-ollama.service.ts,
+                               # ai/system-prompts.ts, ai/gemini.service.ts,
                                # HealthService.ts, HealthNormalizer.ts, ...
         theme.ts
         App.tsx
@@ -420,7 +378,7 @@ hira-ai-app-capacitor/
 
 **4-week restructuring completed**: AI chat v2 (usage limits, suggestions, history), `features/` re-exports (ai, shop, community, workout), path alias `@/*`, 5-tab nav (Profile replaces Progress), CHANGELOG and PROJECT_SUMMARY updated. Optional: React.memo on list items, device testing, EAS/TestFlight build.
 
-**AI Chat (Hira)**: Chat tab uses local Ollama (Phi-4-mini) with production-grade system prompts in `services/ai/system-prompts.ts`. Default prompt is `PHI4_OPTIMIZED_PROMPT`; full set includes wellness_coach, simple, workout_guidance, recovery, emotional_support, insights plus `getSystemPrompt()` and `buildContextualPrompt()`. AiChatScreen: deep black edge-to-edge UI, no Clear button or Today timestamp, small quick-action pills (Log Workout, Check Calories, I'm not well) shown only when input empty and at most one message; streaming with thinking/error states. PROJECT_SUMMARY includes full "AI Chat (Hira) – End-to-End" section with full system prompt text, screen build detail, and data flow.
+**AI Chat (Hira)**: Chat tab uses Gemini 2.5 Flash Lite via `gemini.service.ts` with a single master prompt in `system-prompts.ts` (`buildPrompt` + `HIRA_MASTER_PROMPT_COMPACT`). No Ollama; one identity, structured context (`HiraRuntimeContext`), optional behavior mode. AiChatScreen: deep black edge-to-edge UI, no Clear button or Today timestamp, small quick-action pills (Log Workout, Check Calories, I'm not well) shown only when input empty and at most one message; streaming with thinking/error states. PROJECT_SUMMARY includes full "AI Chat (Hira) – End-to-End" section with master prompt architecture and Gemini data flow.
 
 **Upcoming Priorities**:
 1. **Checkout Flow**: Complete Shop payment integration.

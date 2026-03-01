@@ -11,6 +11,7 @@ import {
     Alert,
     ActivityIndicator,
     Switch,
+    Modal,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -61,6 +62,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
     const [name, setName] = useState('');
     const [dob, setDob] = useState<Date | null>(null);
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [pendingDob, setPendingDob] = useState<Date>(new Date(2000, 0, 1));
     const [gender, setGender] = useState<'Female' | 'Male' | 'Other' | ''>('');
     const [heightCm, setHeightCm] = useState(DEFAULT_HEIGHT_CM);
     const [weightKg, setWeightKg] = useState(DEFAULT_WEIGHT_KG);
@@ -71,8 +73,22 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
     const [loading, setLoading] = useState(false);
 
     const onDateChange = (_event: unknown, selectedDate?: Date) => {
+        if (Platform.OS === 'android') {
+            setShowDatePicker(false);
+            if (selectedDate) setDob(selectedDate);
+            return;
+        }
+        if (selectedDate) setPendingDob(selectedDate);
+    };
+
+    const openDatePicker = () => {
+        setPendingDob(dob || new Date(2000, 0, 1));
+        setShowDatePicker(true);
+    };
+
+    const closeDatePickerIOS = () => {
+        setDob(pendingDob);
         setShowDatePicker(false);
-        if (selectedDate) setDob(selectedDate);
     };
 
     const handleNext = () => {
@@ -242,7 +258,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
             <Text style={styles.subtitle}>This helps us personalize your journey.</Text>
             <View style={styles.formSection}>
                 <Text style={styles.label}>DATE OF BIRTH</Text>
-                <Pressable style={styles.inputContainer} onPress={() => setShowDatePicker(true)}>
+                <Pressable style={styles.inputContainer} onPress={openDatePicker}>
                     <Text style={[styles.input, { color: dob ? colors.textPrimary : colors.textTertiary, flex: 1 }]}>
                         {dob
                             ? `${dob.getDate().toString().padStart(2, '0')} / ${(dob.getMonth() + 1).toString().padStart(2, '0')} / ${dob.getFullYear()}`
@@ -250,7 +266,32 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
                     </Text>
                     <MaterialCommunityIcons name="calendar" size={20} color={colors.textTertiary} />
                 </Pressable>
-                {showDatePicker && (
+                {Platform.OS === 'ios' ? (
+                    <Modal
+                        visible={showDatePicker}
+                        transparent
+                        animationType="slide"
+                    >
+                        <Pressable
+                            style={styles.datePickerOverlay}
+                            onPress={closeDatePickerIOS}
+                        />
+                        <View style={styles.datePickerContainer}>
+                            <View style={styles.datePickerHeader}>
+                                <Pressable onPress={closeDatePickerIOS} hitSlop={16}>
+                                    <Text style={styles.datePickerDone}>Done</Text>
+                                </Pressable>
+                            </View>
+                            <DateTimePicker
+                                value={pendingDob}
+                                mode="date"
+                                display="spinner"
+                                onChange={onDateChange}
+                                maximumDate={new Date()}
+                            />
+                        </View>
+                    </Modal>
+                ) : showDatePicker ? (
                     <DateTimePicker
                         value={dob || new Date()}
                         mode="date"
@@ -258,7 +299,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
                         onChange={onDateChange}
                         maximumDate={new Date()}
                     />
-                )}
+                ) : null}
 
                 <Text style={styles.label}>GENDER</Text>
                 <View style={styles.genderList}>
@@ -612,5 +653,28 @@ const styles = StyleSheet.create({
         ...typography.lg,
         fontWeight: '700',
         color: 'white',
+    },
+    datePickerOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+    },
+    datePickerContainer: {
+        backgroundColor: colors.bgMidnight,
+        borderTopLeftRadius: radius['2xl'],
+        borderTopRightRadius: radius['2xl'],
+        paddingBottom: space['2xl'],
+    },
+    datePickerHeader: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        paddingHorizontal: space.lg,
+        paddingVertical: space.md,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.borderDefault,
+    },
+    datePickerDone: {
+        ...typography.base,
+        fontWeight: '600',
+        color: colors.primaryViolet,
     },
 });
