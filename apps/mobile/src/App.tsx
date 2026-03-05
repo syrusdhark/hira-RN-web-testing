@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import Constants from 'expo-constants';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, BackHandler, Platform, Modal, Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -6,6 +7,7 @@ import { Session } from '@supabase/supabase-js';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { supabase } from './lib/supabase';
+import { debugLog } from './lib/debug-log';
 import { TrackHomeScreen } from './screens/TrackHomeScreen';
 import { WorkoutTrackerScreen } from './screens/WorkoutTrackerScreen';
 import { ProgramScreen } from './screens/ProgramScreen';
@@ -126,16 +128,37 @@ export default function App() {
   };
 
   useEffect(() => {
+    // #region agent log
+    const debuggerHost = (Constants as any).manifest?.debuggerHost ?? (Constants as any).expoConfig?.hostUri ?? null;
+    debugLog({ location: 'App.tsx:mount', message: 'app mounted', data: { debuggerHost }, hypothesisId: 'H1' });
+    // #endregion
+  }, []);
+
+  useEffect(() => {
+    // #region agent log
+    debugLog({ location: 'App.tsx:getSession', message: 'getSession called', hypothesisId: 'H3' });
+    // #endregion
     supabase.auth.getSession().then(({ data: { session } }) => {
+      // #region agent log
+      debugLog({ location: 'App.tsx:getSession', message: 'getSession result', data: { hasSession: !!session }, hypothesisId: 'H3' });
+      // #endregion
       setSession(session);
       setLoading(false);
     }).catch(async (err) => {
       const msg = err?.message ?? String(err);
-      const isInvalidRefreshToken =
+      // #region agent log
+      debugLog({ location: 'App.tsx:getSession', message: 'getSession error', data: { errorMessage: msg }, hypothesisId: 'H3' });
+      // #endregion
+      const isRecoverableAuthError =
         (msg.includes('Refresh Token') && msg.includes('Not Found')) ||
-        msg.includes('Invalid Refresh Token');
-      if (isInvalidRefreshToken) {
-        await supabase.auth.signOut();
+        msg.includes('Invalid Refresh Token') ||
+        msg.toLowerCase().includes('request patch failed') ||
+        msg.toLowerCase().includes('network request failed') ||
+        msg.toLowerCase().includes('failed to fetch') ||
+        msg.toLowerCase().includes('err_connection');
+      if (isRecoverableAuthError) {
+        console.warn('[Auth] Recovering from broken session:', msg);
+        try { await supabase.auth.signOut(); } catch (_) { /* ignore signout errors */ }
         setSession(null);
       }
       setLoading(false);

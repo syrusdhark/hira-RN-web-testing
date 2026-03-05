@@ -17,6 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import { colors, radius, space, typography } from '../theme';
 import { EnvironmentContainer } from '../components/EnvironmentContainer';
 import { supabase } from '../lib/supabase';
+import { debugLog } from '../lib/debug-log';
 
 function AuthForm({ mode }: { mode: 'signin' | 'signup' }) {
     const navigation = useNavigation<any>();
@@ -42,20 +43,35 @@ function AuthForm({ mode }: { mode: 'signin' | 'signup' }) {
                     setLoading(false);
                     return;
                 }
+                // #region agent log
+                debugLog({ location: 'AuthScreen.tsx:signUp', message: 'signUp attempt', data: { mode: 'signup' }, hypothesisId: 'H3' });
+                // #endregion
                 const { error } = await supabase.auth.signUp({
                     email,
                     password,
                 });
                 if (error) throw error;
+                // #region agent log
+                debugLog({ location: 'AuthScreen.tsx:signUp', message: 'signUp success', hypothesisId: 'H3' });
+                // #endregion
                 Alert.alert('Success', 'Check your email for the confirmation link!');
             } else {
+                // #region agent log
+                debugLog({ location: 'AuthScreen.tsx:signIn', message: 'signIn attempt', data: { mode: 'signin' }, hypothesisId: 'H3' });
+                // #endregion
                 const { error } = await supabase.auth.signInWithPassword({
                     email,
                     password,
                 });
                 if (error) throw error;
+                // #region agent log
+                debugLog({ location: 'AuthScreen.tsx:signIn', message: 'signIn success', hypothesisId: 'H3' });
+                // #endregion
             }
         } catch (error: any) {
+            // #region agent log
+            debugLog({ location: 'AuthScreen.tsx:auth', message: 'auth error', data: { errorMessage: error?.message ?? String(error) }, hypothesisId: 'H3' });
+            // #endregion
             Alert.alert('Error', error.message);
         } finally {
             setLoading(false);

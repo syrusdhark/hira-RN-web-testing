@@ -11,7 +11,6 @@ import App from './src/App';
 const log = (msg: string, data: Record<string, unknown>) => {
   const payload = { location: 'index.ts:register', message: msg, data, timestamp: Date.now(), hypothesisId: 'H2' };
   console.log('[DEBUG]', payload);
-  fetch('http://127.0.0.1:7242/ingest/873cbf59-1a11-4af9-aa21-381ba69693ce', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {});
 };
 // #endregion
 

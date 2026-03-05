@@ -242,6 +242,19 @@ export function AiChatScreen({ onNavigateToWorkout }: { onNavigateToWorkout?: ()
   const flatListRef = useRef<FlatList>(null);
   const streamingIdRef = useRef<string | null>(null);
 
+  const quickActions = React.useMemo(
+    () => [
+      { id: 'log-history', label: 'Log History', icon: 'history' as const, iconColor: '#60A5FA', message: null as string | null },
+      { id: 'calories', label: 'Check Calories', icon: 'fire' as const, iconColor: '#FBBF24', message: 'Check calories' },
+      { id: 'not-well', label: "I'm not well", icon: 'heart' as const, iconColor: COLORS.error, message: "I'm not well" },
+      { id: 'workout-day', label: 'My workout for the day', icon: 'dumbbell' as const, iconColor: COLORS.accent, message: 'My workout for the day' },
+      { id: 'focus', label: 'What should I focus on more?', icon: 'target' as const, iconColor: COLORS.success, message: 'What should I focus on more?' },
+      { id: 'pullups', label: 'What is the best workout for pull ups', icon: 'arm-flex' as const, iconColor: '#A78BFA', message: 'What is the best workout for pull ups' },
+      { id: 'improve', label: 'How to improve myself', icon: 'trending-up' as const, iconColor: '#FBBF24', message: 'How to improve myself' },
+    ],
+    []
+  );
+
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
       flatListRef.current?.scrollToEnd({ animated: true });
@@ -344,12 +357,12 @@ export function AiChatScreen({ onNavigateToWorkout }: { onNavigateToWorkout?: ()
 
   return (
     <View style={styles.safeArea}>
-      {/* Single-row header: menu | Hira AI | spacer */}
+      {/* Single-row header: menu | Hira | spacer */}
       <View style={[styles.headerRow, { paddingTop: headerPaddingTop }]}>
         <Pressable style={styles.headerMenuBtn} onPress={() => { }} accessibilityLabel="Menu">
           <MaterialCommunityIcons name="menu" size={24} color={COLORS.text} />
         </Pressable>
-        <Text style={styles.headerTitle} numberOfLines={1}>Hira AI</Text>
+        <Text style={styles.headerTitle} numberOfLines={1}>Hira</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -377,24 +390,24 @@ export function AiChatScreen({ onNavigateToWorkout }: { onNavigateToWorkout?: ()
             style={styles.quickActionsScroll}
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.quickActionsRow}
+            decelerationRate={0.998}
           >
-            <TouchableOpacity
-              style={styles.quickActionPill}
-              onPress={() => handleSendMessage(buildWorkoutHistoryMessage(workoutSessions))}
-              activeOpacity={0.7}
-              disabled={isLoading}
-            >
-              <MaterialCommunityIcons name="history" size={14} color="#60A5FA" />
-              <Text style={styles.quickActionText}>Log History</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.quickActionPill} activeOpacity={0.7}>
-              <MaterialCommunityIcons name="fire" size={14} color="#FBBF24" />
-              <Text style={styles.quickActionText}>Check Calories</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.quickActionPill} activeOpacity={0.7}>
-              <MaterialCommunityIcons name="heart" size={14} color={COLORS.error} />
-              <Text style={styles.quickActionText}>I'm not well</Text>
-            </TouchableOpacity>
+            {quickActions.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.quickActionPill}
+                onPress={() =>
+                  handleSendMessage(
+                    item.message === null ? buildWorkoutHistoryMessage(workoutSessions) : item.message
+                  )
+                }
+                activeOpacity={0.7}
+                disabled={isLoading}
+              >
+                <MaterialCommunityIcons name={item.icon} size={14} color={item.iconColor} />
+                <Text style={styles.quickActionText}>{item.label}</Text>
+              </TouchableOpacity>
+            ))}
           </ScrollView>
         )}
 
@@ -510,6 +523,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: 16,
+    paddingRight: 24,
     paddingVertical: 8,
     backgroundColor: COLORS.surface,
   },

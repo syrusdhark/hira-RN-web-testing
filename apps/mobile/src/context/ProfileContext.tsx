@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useState, typ
 import { supabase } from '../lib/supabase';
 
 // #region agent log
-const _profileLog = (msg: string, data: Record<string, unknown>) => { const p = { location: 'ProfileContext.tsx', message: msg, data, timestamp: Date.now(), hypothesisId: 'H5' }; console.log('[DEBUG]', p); fetch('http://127.0.0.1:7242/ingest/873cbf59-1a11-4af9-aa21-381ba69693ce', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) }).catch(() => {}); };
+const _profileLog = (msg: string, data: Record<string, unknown>) => { const p = { location: 'ProfileContext.tsx', message: msg, data, timestamp: Date.now(), hypothesisId: 'H5' }; console.log('[DEBUG]', p); };
 // #endregion
 
 /** Merged profile + health for cache. Single source of truth for profile-related screens. */
@@ -123,9 +123,23 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || cancelled) return;
-      await refreshProfile();
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (cancelled) return;
+        if (!user || error) {
+          setLoading(false);
+          return;
+        }
+        await refreshProfile();
+      } catch (err: any) {
+        const msg = err?.message ?? String(err);
+        console.warn('Profile init network error:', msg);
+        // Don't hang on loading if network is down
+        if (!cancelled) {
+          setError('Network error — please check your connection and try again.');
+          setLoading(false);
+        }
+      }
     }
     init();
     return () => { cancelled = true; };

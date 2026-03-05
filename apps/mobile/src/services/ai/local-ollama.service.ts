@@ -1,6 +1,7 @@
 import 'react-native-url-polyfill/auto';
 import EventSource from 'react-native-sse';
 import { PHI4_OPTIMIZED_PROMPT } from './system-prompts';
+import { debugLog } from '../../lib/debug-log';
 
 // You can override this if needed, e.g. from env, but per test project it runs on a physical device pointing to host IP.
 // Feel free to replace 192.168.29.33 with your machine's IP, or 10.0.2.2 if on emulator.
@@ -39,6 +40,9 @@ export async function sendOllamaMessage(
         });
 
         console.log("INITIALIZING EVENT SOURCE WITH URL:", OLLAMA_API_CONFIG.baseUrl);
+        // #region agent log
+        debugLog({ location: 'local-ollama.service.ts:sendOllamaMessage', message: 'ollama request', data: { baseUrl: OLLAMA_API_CONFIG.baseUrl }, hypothesisId: 'H2' });
+        // #endregion
 
         const es = new EventSource(OLLAMA_API_CONFIG.baseUrl, {
             headers: {
@@ -94,6 +98,9 @@ export async function sendOllamaMessage(
                     console.error("RAW ERROR DATA:", event.data);
                 }
             }
+            // #region agent log
+            debugLog({ location: 'local-ollama.service.ts:sendOllamaMessage', message: 'ollama connection error', data: { baseUrl: OLLAMA_API_CONFIG.baseUrl, errorMessage: errorMsg }, hypothesisId: 'H2' });
+            // #endregion
             reject(new Error(errorMsg));
         });
 
