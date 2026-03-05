@@ -19,7 +19,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { sendOllamaMessage } from '../services/ai/local-ollama.service';
+import { sendGeminiMessage } from '../services/ai/gemini.service';
 import { useWorkoutSessions, type WorkoutSessionSummary } from '../hooks/useWorkoutSessions';
 
 const COLORS = {
@@ -317,12 +317,15 @@ export function AiChatScreen({ onNavigateToWorkout }: { onNavigateToWorkout?: ()
           )
         );
 
-        await sendOllamaMessage(history, (delta) => {
-          accumulated += delta;
-          setMessages((prev) =>
-            prev.map((m) => (m.id === streamId ? { ...m, content: accumulated } : m))
-          );
-          scrollToBottom();
+        await sendGeminiMessage({
+          messages: history,
+          onStream: (delta) => {
+            accumulated += delta;
+            setMessages((prev) =>
+              prev.map((m) => (m.id === streamId ? { ...m, content: accumulated } : m))
+            );
+            scrollToBottom();
+          },
         });
 
         setMessages((prev) =>

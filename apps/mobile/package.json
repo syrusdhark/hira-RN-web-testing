@@ -5,7 +5,8 @@
   "scripts": {
     "start": "npx expo start",
     "android": "npx expo run:android",
-    "ios": "npx expo run:ios",
+    "ios": "bash -c 'source scripts/ensure-ssl-cert.sh; npx expo run:ios'",
+    "ios:pod": "bash -c 'source scripts/ensure-ssl-cert.sh; cd ios && pod install && cd ..'",
     "web": "npx expo start --web",
     "build:web": "expo export --platform web",
     "cap:sync": "cap sync",

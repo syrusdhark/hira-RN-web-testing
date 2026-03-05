@@ -52,6 +52,7 @@ export function PersonalInfoScreen({ onClose }: { onClose: () => void }) {
     const [email, setEmail] = useState('');
     const [dob, setDob] = useState<Date | null>(null);
     const [showDobPicker, setShowDobPicker] = useState(false);
+    const [pendingDob, setPendingDob] = useState<Date>(new Date(2000, 0, 1));
     const [gender, setGender] = useState('');
     const [height, setHeight] = useState('');
     const [weight, setWeight] = useState('');
@@ -149,11 +150,23 @@ export function PersonalInfoScreen({ onClose }: { onClose: () => void }) {
         }
     };
 
-    const onDateChange = (event: any, selectedDate?: Date) => {
-        setShowDobPicker(Platform.OS === 'ios');
-        if (selectedDate) {
-            setDob(selectedDate);
+    const onDateChange = (_event: any, selectedDate?: Date) => {
+        if (Platform.OS === 'android') {
+            setShowDobPicker(false);
+            if (selectedDate) setDob(selectedDate);
+            return;
         }
+        if (selectedDate) setPendingDob(selectedDate);
+    };
+
+    const openDobPicker = () => {
+        setPendingDob(dob || new Date(2000, 0, 1));
+        setShowDobPicker(true);
+    };
+
+    const closeDobPickerIOS = () => {
+        setDob(pendingDob);
+        setShowDobPicker(false);
     };
 
     if (profileLoading || !profile) {
@@ -220,12 +233,30 @@ export function PersonalInfoScreen({ onClose }: { onClose: () => void }) {
                 <View style={styles.row}>
                     <View style={[styles.section, { flex: 1, marginRight: space.sm }]}>
                         <Text style={styles.label}>DATE OF BIRTH</Text>
-                        <TouchableOpacity onPress={() => setShowDobPicker(true)} style={styles.input}>
+                        <TouchableOpacity onPress={openDobPicker} style={styles.input}>
                             <Text style={{ color: dob ? colors.textPrimary : colors.textTertiary }}>
                                 {dob ? dob.toLocaleDateString() : 'YYYY-MM-DD'}
                             </Text>
                         </TouchableOpacity>
-                        {showDobPicker && (
+                        {Platform.OS === 'ios' ? (
+                            <Modal visible={showDobPicker} transparent animationType="slide">
+                                <Pressable style={styles.dobPickerOverlay} onPress={closeDobPickerIOS} />
+                                <View style={styles.dobPickerContainer}>
+                                    <View style={styles.dobPickerHeader}>
+                                        <Pressable onPress={closeDobPickerIOS} hitSlop={16}>
+                                            <Text style={styles.dobPickerDone}>Done</Text>
+                                        </Pressable>
+                                    </View>
+                                    <DateTimePicker
+                                        value={pendingDob}
+                                        mode="date"
+                                        display="spinner"
+                                        onChange={onDateChange}
+                                        maximumDate={new Date()}
+                                    />
+                                </View>
+                            </Modal>
+                        ) : showDobPicker ? (
                             <DateTimePicker
                                 value={dob || new Date(2000, 0, 1)}
                                 mode="date"
@@ -233,7 +264,7 @@ export function PersonalInfoScreen({ onClose }: { onClose: () => void }) {
                                 onChange={onDateChange}
                                 maximumDate={new Date()}
                             />
-                        )}
+                        ) : null}
                     </View>
                     <View style={[styles.section, { flex: 1 }]}>
                         <Text style={styles.label}>GENDER</Text>
@@ -454,5 +485,28 @@ const styles = StyleSheet.create({
     },
     goalTextSelected: {
         color: colors.textPrimary,
+    },
+    dobPickerOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+    },
+    dobPickerContainer: {
+        backgroundColor: colors.bgMidnight,
+        borderTopLeftRadius: radius['2xl'],
+        borderTopRightRadius: radius['2xl'],
+        paddingBottom: space['2xl'],
+    },
+    dobPickerHeader: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        paddingHorizontal: space.lg,
+        paddingVertical: space.md,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.borderDefault,
+    },
+    dobPickerDone: {
+        ...typography.base,
+        fontWeight: '600',
+        color: colors.primaryViolet,
     },
 });

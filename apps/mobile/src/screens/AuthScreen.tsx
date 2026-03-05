@@ -46,7 +46,7 @@ function AuthForm({ mode }: { mode: 'signin' | 'signup' }) {
                 // #region agent log
                 debugLog({ location: 'AuthScreen.tsx:signUp', message: 'signUp attempt', data: { mode: 'signup' }, hypothesisId: 'H3' });
                 // #endregion
-                const { error } = await supabase.auth.signUp({
+                const { data, error } = await supabase.auth.signUp({
                     email,
                     password,
                 });
@@ -54,7 +54,19 @@ function AuthForm({ mode }: { mode: 'signin' | 'signup' }) {
                 // #region agent log
                 debugLog({ location: 'AuthScreen.tsx:signUp', message: 'signUp success', hypothesisId: 'H3' });
                 // #endregion
-                Alert.alert('Success', 'Check your email for the confirmation link!');
+                if (data?.user && !data?.session && data?.user?.identities?.length === 0) {
+                    Alert.alert('Already registered', 'An account with this email already exists. Try signing in instead.');
+                    return;
+                }
+                if (data?.session) {
+                    Alert.alert('Success', "You're all set. Complete your profile on the next screen.");
+                    return;
+                }
+                Alert.alert(
+                    'Confirm your email',
+                    'We sent a confirmation link to ' + email + '. Open it to activate your account, then come back here and sign in.',
+                    [{ text: 'OK', onPress: () => handleToggle('signin') }]
+                );
             } else {
                 // #region agent log
                 debugLog({ location: 'AuthScreen.tsx:signIn', message: 'signIn attempt', data: { mode: 'signin' }, hypothesisId: 'H3' });
@@ -72,7 +84,15 @@ function AuthForm({ mode }: { mode: 'signin' | 'signup' }) {
             // #region agent log
             debugLog({ location: 'AuthScreen.tsx:auth', message: 'auth error', data: { errorMessage: error?.message ?? String(error) }, hypothesisId: 'H3' });
             // #endregion
-            Alert.alert('Error', error.message);
+            const msg = error?.message ?? String(error);
+            if (msg.includes('Email not confirmed') || msg.includes('email_not_confirmed')) {
+                Alert.alert(
+                    'Confirm your email first',
+                    'We sent you a confirmation link. Check your inbox (and spam), open the link, then try signing in again.'
+                );
+            } else {
+                Alert.alert('Error', msg);
+            }
         } finally {
             setLoading(false);
         }
