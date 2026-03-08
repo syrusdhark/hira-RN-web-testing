@@ -30,7 +30,8 @@ type TemplateRow = {
   description: string | null;
   created_at: string;
   updated_at: string;
-  workout_template_exercises: { count: number }[];
+  workout_template_exercises: { count?: number }[] | Array<{ exercises?: { exercise_type?: string } }>;
+  exercise_count?: number;
   difficulty_level?: string;
   estimated_duration?: number;
   activity_type?: string | null;
@@ -38,7 +39,10 @@ type TemplateRow = {
 };
 
 function exerciseCount(row: TemplateRow): number {
-  const c = row.workout_template_exercises?.[0]?.count;
+  if (typeof (row as any).exercise_count === 'number') return (row as any).exercise_count;
+  const arr = row.workout_template_exercises;
+  if (Array.isArray(arr)) return arr.length;
+  const c = arr?.[0]?.count;
   return typeof c === 'number' ? c : 0;
 }
 

@@ -361,8 +361,8 @@ export function CreateProgramScreen({ navigation, onSuccess }: CreateProgramScre
                   {templates.length === 0 ? (
                     <Text style={styles.modalEmpty}>No workouts yet. Create one in Workouts.</Text>
                   ) : (
-                    (templates as { id: string; title?: string; workout_template_exercises?: { count?: number }[] }[]).map((t) => {
-                      const count = t.workout_template_exercises?.[0]?.count ?? 0;
+                    (templates as { id: string; title?: string; workout_template_exercises?: { count?: number }[]; exercise_count?: number }[]).map((t) => {
+                      const count = t.exercise_count ?? t.workout_template_exercises?.[0]?.count ?? (Array.isArray(t.workout_template_exercises) ? t.workout_template_exercises.length : 0) ?? 0;
                       return (
                         <Pressable
                           key={t.id}

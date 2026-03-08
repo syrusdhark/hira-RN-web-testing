@@ -1,12 +1,9 @@
 /**
  * AI services: context, production API (OpenRouter / Anthropic), Gemini chat.
  * Chat entry point: ai-chat.service.ts (createConversation, sendChatMessage).
- * Local chat: gemini.service sendGeminiMessage with buildPrompt.
+ * Local chat: gemini.service sendGeminiMessage (conversation only).
  */
 
-export { buildPrompt, wellnessToRuntimeContext } from './system-prompts';
-export { HIRA_MASTER_PROMPT, HIRA_MASTER_PROMPT_COMPACT } from './system-prompts';
-export type { HiraRuntimeContext, BuildPromptOptions } from './system-prompts';
 export { sendGeminiMessage } from './gemini.service';
 export type { SendGeminiMessageParams, GeminiConfig } from './gemini.service';
 export { analyzeQueryType, buildContextForQuery } from './context-builder.service';

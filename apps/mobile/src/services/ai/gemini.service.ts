@@ -1,11 +1,11 @@
 /**
  * Gemini API client for Hira AI chat.
- * Uses master prompt + structured context; supports chat and optional streaming.
+ * Uses @google/genai SDK with streaming, optional Google Search and thinking config.
  */
 
-import { buildPrompt, type HiraRuntimeContext } from './system-prompts';
+import Constants from 'expo-constants';
+import { GoogleGenAI } from '@google/genai';
 
-const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
 const DEFAULT_TEMPERATURE = 0.65;
 const DEFAULT_MAX_TOKENS = 2048;
@@ -19,40 +19,22 @@ export interface GeminiConfig {
 
 export interface SendGeminiMessageParams {
   messages: Array<{ role: string; content: string }>;
-  context?: HiraRuntimeContext;
   onStream?: (chunk: string) => void;
   config?: Partial<GeminiConfig>;
 }
 
-interface GeminiGenerateResponse {
-  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-}
-
 function getApiKey(): string {
-  let key = '';
-  try {
-    if (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_GEMINI_API_KEY != null) {
-      key = String(process.env.EXPO_PUBLIC_GEMINI_API_KEY);
-    }
-    if (!key && typeof require !== 'undefined') {
-      const Constants = require('expo-constants').default;
-      const extra = Constants?.expoConfig?.extra as { geminiApiKey?: string } | undefined;
-      if (extra?.geminiApiKey) key = String(extra.geminiApiKey);
-    }
-  } catch {
-    // ignore
-  }
-  if (!key || !key.trim()) {
-    throw new Error(
-      'Missing Gemini API key. Set EXPO_PUBLIC_GEMINI_API_KEY in apps/mobile/.env or extra.geminiApiKey in app config.'
-    );
+  const key =
+    Constants.expoConfig?.extra?.geminiApiKey ??
+    (typeof process !== 'undefined' ? process.env?.GEMINI_API_KEY : undefined);
+  if (!key || typeof key !== 'string' || !key.trim()) {
+    throw new Error('Missing Gemini API key. Set GEMINI_API_KEY in your environment.');
   }
   return key.trim();
 }
 
 /**
- * Convert chat messages to Gemini contents format.
- * System is sent as systemInstruction; user/assistant turn into contents.
+ * Convert chat messages to SDK contents format (role 'user' | 'model', parts with text).
  */
 function toGeminiContents(messages: Array<{ role: string; content: string }>): Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> {
   const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
@@ -64,106 +46,73 @@ function toGeminiContents(messages: Array<{ role: string; content: string }>): A
 }
 
 /**
- * Send a chat request to Gemini. Uses buildPrompt for system instructions.
+ * Send a chat request via @google/genai. Sends only the conversation (no system instruction).
  * If onStream is provided, streams the response; otherwise returns the full reply.
  */
 export async function sendGeminiMessage(params: SendGeminiMessageParams): Promise<string> {
-  const {
-    messages,
-    context,
-    onStream,
-    config: configOverride,
-  } = params;
+  const { messages, onStream, config: configOverride } = params;
 
   const apiKey = configOverride?.apiKey ?? getApiKey();
   const model = configOverride?.model ?? DEFAULT_MODEL;
   const temperature = configOverride?.temperature ?? DEFAULT_TEMPERATURE;
   const maxTokens = configOverride?.maxTokens ?? DEFAULT_MAX_TOKENS;
 
-  const runtimeContext: HiraRuntimeContext = context ?? {
-    user: { name: 'User' },
-  };
-  const systemInstruction = buildPrompt(runtimeContext, { useCompact: true });
-
   const contents = toGeminiContents(messages);
   if (contents.length === 0) {
     throw new Error('At least one message is required');
   }
 
-  const url = `${GEMINI_BASE}/${model}:${onStream ? 'streamGenerateContent' : 'generateContent'}?key=${encodeURIComponent(apiKey)}`;
-  const body = {
-    systemInstruction: {
-      parts: [{ text: systemInstruction }],
-    },
-    contents,
-    generationConfig: {
-      temperature,
-      maxOutputTokens: maxTokens,
-    },
+  const ai = new GoogleGenAI({ apiKey });
+
+  const config: Record<string, unknown> = {
+    thinkingConfig: { thinkingBudget: 0 },
+    temperature,
+    maxOutputTokens: maxTokens,
   };
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  // #region agent log
+  fetch('http://127.0.0.1:7911/ingest/d3927811-4405-4a0e-8cdd-dfbe6b5cc9bd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'96148b'},body:JSON.stringify({sessionId:'96148b',location:'gemini.service.ts:preCall',message:'Before generateContentStream',data:{model,contentsLength:contents.length,hasApiKey:!!apiKey},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
+  // #endregion
 
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Gemini API error ${res.status}: ${errText}`);
-  }
+  try {
+    const response = await ai.models.generateContentStream({
+      model,
+      config,
+      contents,
+    });
 
-  if (onStream && res.body != null) {
-    return streamResponse(res, onStream);
-  }
+    // #region agent log
+    fetch('http://127.0.0.1:7911/ingest/d3927811-4405-4a0e-8cdd-dfbe6b5cc9bd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'96148b'},body:JSON.stringify({sessionId:'96148b',location:'gemini.service.ts:postAwait',message:'Got stream response',data:{responseType:typeof response,isAsyncIterable:typeof (response as any)[Symbol.asyncIterator]},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
+    // #endregion
 
-  const data = (await res.json()) as GeminiGenerateResponse;
-  const text =
-    data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-  return text;
-}
-
-async function streamResponse(
-  res: Response,
-  onStream: (chunk: string) => void
-): Promise<string> {
-  const reader = res.body!.getReader();
-  const decoder = new TextDecoder();
-  let full = '';
-  let buffer = '';
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() ?? '';
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed || !trimmed.startsWith('{')) continue;
-      try {
-        const obj = JSON.parse(trimmed) as GeminiGenerateResponse;
-        const text = obj.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-        if (text) {
-          full += text;
-          onStream(text);
-        }
-      } catch {
-        // ignore parse errors on stream chunks
+    let full = '';
+    let chunkIndex = 0;
+    for await (const chunk of response) {
+      if (chunkIndex === 0) {
+        // #region agent log
+        const textVal = (chunk as { text?: string }).text;
+        fetch('http://127.0.0.1:7911/ingest/d3927811-4405-4a0e-8cdd-dfbe6b5cc9bd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'96148b'},body:JSON.stringify({sessionId:'96148b',location:'gemini.service.ts:firstChunk',message:'First chunk shape',data:{chunkKeys:Object.keys(chunk as object),hasText:typeof textVal,textLen:textVal?.length},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
+        // #endregion
       }
-    }
-  }
-  if (buffer.trim()) {
-    try {
-      const obj = JSON.parse(buffer.trim()) as GeminiGenerateResponse;
-      const text = obj.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+      chunkIndex++;
+      const text = (chunk as { text?: string }).text ?? '';
       if (text) {
         full += text;
-        onStream(text);
+        onStream?.(text);
       }
-    } catch {
-      // ignore
     }
+
+    // #region agent log
+    fetch('http://127.0.0.1:7911/ingest/d3927811-4405-4a0e-8cdd-dfbe6b5cc9bd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'96148b'},body:JSON.stringify({sessionId:'96148b',location:'gemini.service.ts:afterLoop',message:'After stream loop',data:{chunkCount:chunkIndex,fullLength:full.length},timestamp:Date.now(),hypothesisId:'H3'})}).catch(()=>{});
+    // #endregion
+
+    return full;
+  } catch (err) {
+    // #region agent log
+    const msg = err instanceof Error ? err.message : String(err);
+    fetch('http://127.0.0.1:7911/ingest/d3927811-4405-4a0e-8cdd-dfbe6b5cc9bd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'96148b'},body:JSON.stringify({sessionId:'96148b',location:'gemini.service.ts:catch',message:'Gemini catch',data:{errorMessage:msg,constructorName:err instanceof Error ? err.constructor?.name : 'unknown'},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
+    // #endregion
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`Gemini API error: ${message}`);
   }
-  return full;
 }

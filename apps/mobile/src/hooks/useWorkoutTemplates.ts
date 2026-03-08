@@ -5,6 +5,18 @@ export const WORKOUT_TEMPLATES_KEY = ['workoutTemplates'];
 
 const ACTIVITY_TYPE_VALUES = ['bodybuilding', 'strength', 'yoga', 'stretch', 'rest', 'calisthenics', 'hybrid', 'running'] as const;
 
+/** Pick activity_type by most common exercise type; use hybrid only when there's a tie for max count. */
+function pickActivityTypeFromCounts(counts: Record<string, number>): { activity_type: string | null; activity_type_tags: string[] | null } {
+    const entries = Object.entries(counts);
+    if (entries.length === 0) return { activity_type: null, activity_type_tags: null };
+    const maxCount = Math.max(...entries.map(([, c]) => c));
+    const topTypes = entries.filter(([, c]) => c === maxCount).map(([t]) => t);
+    if (topTypes.length === 1) {
+        return { activity_type: topTypes[0], activity_type_tags: null };
+    }
+    return { activity_type: 'hybrid', activity_type_tags: topTypes };
+}
+
 async function deriveActivityTypeAndTags(templateId: string): Promise<{ activity_type: string | null; activity_type_tags: string[] | null }> {
     const { data: rows, error } = await supabase
         .from('workout_template_exercises')
@@ -29,12 +41,45 @@ async function deriveActivityTypeAndTags(templateId: string): Promise<{ activity
     for (const t of types) {
         counts[t] = (counts[t] || 0) + 1;
     }
-    const distinct = Object.keys(counts);
+    return pickActivityTypeFromCounts(counts);
+}
 
-    if (distinct.length === 1) {
-        return { activity_type: distinct[0], activity_type_tags: null };
+/** Compute activity_type from a template row that has workout_template_exercises with exercises(exercise_type). */
+export function computeActivityTypeFromRow(t: {
+    workout_template_exercises?: Array<{ exercises?: { exercise_type?: string | null } | null }>;
+}): { activity_type: string | null; activity_type_tags: string[] | null } {
+    const rows = t?.workout_template_exercises ?? [];
+    const types: string[] = [];
+    for (const row of rows) {
+        const exType = row?.exercises?.exercise_type;
+        if (exType && typeof exType === 'string' && ACTIVITY_TYPE_VALUES.includes(exType as any)) {
+            types.push(exType);
+        }
     }
-    return { activity_type: 'hybrid', activity_type_tags: distinct };
+    if (types.length === 0) return { activity_type: null, activity_type_tags: null };
+    const counts: Record<string, number> = {};
+    for (const type of types) {
+        counts[type] = (counts[type] || 0) + 1;
+    }
+    return pickActivityTypeFromCounts(counts);
+}
+
+/** Format activity_type + activity_type_tags for display (e.g. "Strength" or "Hybrid (Strength, Yoga)"). */
+export function formatActivityTypeLabel(item: {
+    activity_type?: string | null;
+    activity_type_tags?: string[] | null;
+}): string {
+    const type = item.activity_type;
+    if (!type || !type.trim()) return '';
+    const single = type.trim().toLowerCase();
+    const display = single.charAt(0).toUpperCase() + single.slice(1);
+    if (type === 'hybrid' && item.activity_type_tags?.length) {
+        const tags = item.activity_type_tags
+            .map((tag) => tag.charAt(0).toUpperCase() + tag.slice(1))
+            .join(', ');
+        return `Hybrid (${tags})`;
+    }
+    return display;
 }
 
 export function useWorkoutTemplates() {
@@ -43,7 +88,7 @@ export function useWorkoutTemplates() {
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('workout_templates')
-                .select('*, workout_template_exercises(count)')
+                .select('*, workout_template_exercises(exercises(exercise_type))')
                 .order('updated_at', { ascending: false });
 
             if (error) {
@@ -51,7 +96,12 @@ export function useWorkoutTemplates() {
                 throw error;
             }
 
-            return data || [];
+            return (data || []).map((t: any) => ({
+                ...t,
+                exercise_count: Array.isArray(t.workout_template_exercises)
+                    ? t.workout_template_exercises.length
+                    : (t.workout_template_exercises?.[0]?.count ?? 0),
+            }));
         },
     });
 }

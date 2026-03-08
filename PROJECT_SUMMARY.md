@@ -19,10 +19,10 @@ The project is a design-system–driven mobile application focused on tracking w
 ### Mobile (`apps/mobile`)
 
 **Status**: Active Development  
-**Tech Stack**: React Native, Expo (~54), Capacitor (7), TypeScript, TanStack Query, Supabase Client, design tokens (`src/theme.ts`: colors, space, typography, radius), expo-linear-gradient.  
+**Tech Stack**: React Native, Expo (~54), Capacitor (7), TypeScript, TanStack Query, Supabase Client, design tokens (`src/theme.ts`: colors, space, typography, radius), expo-linear-gradient, @react-navigation/drawer, @google/generative-ai, expo-speech-recognition (optional), react-native-safe-area-context.  
 **Native builds**: Capacitor config at `apps/mobile/capacitor.config.ts` (appId `com.anonymous.hiraai`, webDir `dist`). Use `npm run cap:sync` then `npm run cap:android` / `npm run cap:ios` for native runs after building.
 
-**Today tab**: The **Today** tab content is the **Workout Tracker** screen (`WorkoutTrackerScreen`) embedded in `TrackHomeScreen` — Move card (program CTA), Muscle intensity, My Workouts, marketplace. **Tabs**: Buy, Today, Hira, Connect, Profile (5 tabs; Workout Insights reachable from Today). Back from Program, My Workouts, or Workout Insights returns to the same origin via `programReturnScreen`, `myWorkoutsReturnScreen`, and `workoutInsightsReturnScreen` in `App.tsx` (in-app and hardware back).
+**Today tab**: The **Today** tab content is the **Workout Tracker** screen (`WorkoutTrackerScreen`) embedded in `TrackHomeScreen` — Move card (program CTA), Muscle intensity, My Workouts, marketplace. **Tabs**: Buy, Today, Hira, Connect, Profile (5 tabs; Workout Insights reachable from Today). The **Hira** tab renders `ChatDrawerScreen` (Drawer navigator with hamburger menu, sidebar "Chat History", header title "Hira", no top-right icons); the main screen inside the drawer is `AiChatScreen`. Back from Program, My Workouts, or Workout Insights returns to the same origin via `programReturnScreen`, `myWorkoutsReturnScreen`, and `workoutInsightsReturnScreen` in `App.tsx` (in-app and hardware back).
 
 **Move card (Workout Tracker)**: When used as the program entry, the card shows **"Create your own program"** with no Start button and no time icon / "High intensity" subtitle (`NextWorkoutCard` props `hideSubtitle`, `hideCta`). Tapping the card navigates to the Program screen.
 **Gamification (current state)**: **XP** is disabled in the app (no XP GAINED radial, no rank/XP on profile; hooks and DB tables remain for future use). **Streak** is shown on the tracker home header badge only.
@@ -36,15 +36,15 @@ The project is a design-system–driven mobile application focused on tracking w
 
 2. **Navigation**
    - **Core**: State-based navigation in `App.tsx`.
-   - **Main Tabs**: `TrackHomeScreen` with 5 tabs: **Buy** (Shop), **Today** (Workout Tracker), **Hira** (AI Chat v2), **Connect** (Community), **Profile**. Bottom tab bar uses `BottomTabBar` + `TabItem` with per-tab animation (Reanimated) and white active state. **Today** tab renders `WorkoutTrackerScreen` (no back button when embedded); standalone Workout Tracker when `currentScreen === 'workout'`; Workout Insights from Today link.
+   - **Main Tabs**: `TrackHomeScreen` with 5 tabs: **Buy** (Shop), **Today** (Workout Tracker), **Hira** (AI Chat), **Connect** (Community), **Profile**. Bottom tab bar uses `BottomTabBar` + `TabItem` with per-tab animation (Reanimated) and white active state. **Hira** tab renders `ChatDrawerScreen` (Drawer with hamburger, sidebar, header "Hira") which contains `AiChatScreen`. **Today** tab renders `WorkoutTrackerScreen` (no back button when embedded); standalone Workout Tracker when `currentScreen === 'workout'`; Workout Insights from Today link.
    - **Return-screen pattern**: Opening **Program**, **My Workouts**, or **Workout Insights** from the Today tab stores return screen `'track'`; opening from the standalone Workout Tracker stores `'workout'`. Back (in-app and Android hardware back) uses the stored value so users return to the correct tab/screen.
    - **Screens**: Workout Tracker (hub), Program, Create Program, Template Create/Session, My Workouts, Workout History, Workout Insights (Muscle intensity), Shop, Cart, Personal Info, Community, Create Post, and others.
 
 3. **AI Chat (Hira)**
-   - **AiChatScreen**: In-app AI wellness coach tab (Hira tab in bottom nav). Deep black UI, edge-to-edge layout, greeting from Hira, small quick-action pills (Log Workout, Check Calories, I'm not well) shown only when input is empty and no user messages yet; pills hide when user types. No "Clear" button in header; no "Today HH:MM" timestamp row. Streaming replies with "thinking" state; error state in bubble. See **"AI Chat (Hira) – End-to-End"** below for full detail.
-   - **Backend**: Chat tab uses **Gemini 2.5 Flash Lite** via [gemini.service.ts](apps/mobile/src/services/ai/gemini.service.ts) with a single master prompt from [system-prompts.ts](apps/mobile/src/services/ai/system-prompts.ts) (`buildPrompt` + `HIRA_MASTER_PROMPT_COMPACT`). Production path: `ai-chat.service.ts` and **AI service v2** (`services/ai/ai-chat-service-v2.ts`) — `sendMessage`, `getUserUsage`, `clearConversation`, `getConversationHistory`; daily token limit for production API; Anthropic/OpenRouter.
-   - **Context**: `ai-context.service.ts` and `context-builder.service.ts` build user context (profile, workout) for personalized responses; `system-prompts.ts` provides `buildPrompt(HiraRuntimeContext)` to inject user state (name, feeling, energy, recovery) and optional surface/behaviorMode.
-   - **Persistence**: Production path uses Supabase (`ai_messages`, `ai_conversations`, `ai_usage_logs`). Local Ollama chat is in-memory only (no persistence in current implementation).
+   - **Chat tab shell**: The Hira tab renders [ChatDrawerScreen](apps/mobile/src/screens/ChatDrawerScreen.tsx) — a Drawer navigator (header: hamburger left, title "Hira", no top-right icons; sidebar: dark #111, "Chat History" placeholder; one screen "Chat" → AiChatScreen). Wrapped in `EnvironmentContainer` with `solidBackground="#000000"` and tab bar footer.
+   - **AiChatScreen**: Minimal chat UI: deep black background, no in-screen header (Drawer provides it). **Model**: [@google/generative-ai](https://www.npmjs.com/package/@google/generative-ai) with **gemini-2.5-flash-lite**; API key from `Constants.expoConfig?.extra?.geminiApiKey` or `process.env.GEMINI_API_KEY`. **Messages**: Plain list `{ id, text, sender: 'user' | 'ai' }`; no system instruction — only conversation history is sent. **Input bar**: Single pill (dark #222) with left "+" (attach placeholder), center `TextInput` ("Type a message..."), right circular gradient button (mic when empty, send arrow when text). **Voice**: Optional [expo-speech-recognition](https://www.npmjs.com/package/expo-speech-recognition) (try/catch require); mic starts/stops listening and fills input with transcript. **Keyboard**: `Keyboard.addListener` (keyboardDidShow/keyboardWillHide); input bar is `position: absolute` with `bottom: keyboardBottomOffset` so it sits above the keyboard (Android: offset reduced by 80px to minimize gap). Disclaimer below input: "Hira AI can make mistakes. Check important info."
+   - **Backend / production**: [gemini.service.ts](apps/mobile/src/services/ai/gemini.service.ts) exists for optional streaming/API use; current in-tab chat uses the SDK directly. Production path: `ai-chat.service.ts`, **AI service v2** (`ai-chat-service-v2.ts`); Anthropic/OpenRouter for production API.
+   - **Persistence**: Current in-tab chat is in-memory only. Production path can use Supabase (`ai_messages`, `ai_conversations`, `ai_usage_logs`).
 
 4. **Workout Tracking**
    - **Workout Hub**: `WorkoutTrackerScreen` — Move card (program CTA), Muscle intensity, My Workouts, marketplace. Shown as the **Today** tab content (no back button) and as a standalone screen (back to track). Move card taps go to Program; "See all" goes to My Workouts; Muscle intensity goes to Workout Insights; back from each returns to the originating screen/tab.
@@ -105,6 +105,8 @@ graph TD
     Screens --> AIService
     AIService --> AIContext
     AIService --> AIAPI[Anthropic / OpenRouter API]
+    Screens --> GenAI[@google/generative-ai]
+    GenAI --> GeminiAPI[Gemini API]
 
     subgraph Backend
         SupabaseDb[(Supabase Postgres)]
@@ -139,7 +141,7 @@ graph TD
 | workout | WorkoutTrackerScreen | Custom (View + ScrollView) | useProgramSchedule, useWorkoutTemplates, useUserStreaks |
 | profile | ProfileScreen | EnvironmentContainer + ScreenHeader + Section | ProfileContext |
 | shop (tab) | ShopHomeScreen | EnvironmentContainer + ScreenHeader | useShopProducts, CartContext |
-| chat (tab) | AiChatScreen | EnvironmentContainer (noPadding, solidBackground black) + custom chat layout | gemini.service, system-prompts.ts; see "AI Chat (Hira) – End-to-End" |
+| chat (tab) | ChatDrawerScreen → AiChatScreen | EnvironmentContainer + Drawer (hamburger, sidebar) + SafeAreaView, FlatList, absolute input bar | @google/generative-ai (gemini-2.5-flash-lite), GEMINI_API_KEY; optional expo-speech-recognition. See "AI Chat (Hira) – End-to-End" |
 | community (tab) | CommunityScreen | EnvironmentContainer + Section | useCommunityFeed, useCommunityActions |
 | program | ProgramScreen | EnvironmentContainer + ScreenHeader + Section | useProgramSchedule |
 | program-create | CreateProgramScreen | EnvironmentContainer + Section | useCreateProgram, useWorkoutTemplates |
@@ -160,13 +162,13 @@ graph TD
 
 ## AI Chat (Hira) – End-to-End
 
-This section describes the AI wellness chat feature in full: where it lives, how the screen is built, the master prompt architecture, and how the Gemini pipeline works.
+This section describes the in-app AI chat: where it lives, how the screen is built, and how the Gemini pipeline works.
 
 ### Where It Lives in the App
 
-- **Tab**: The **Hira** tab in the main bottom navigation ([TrackHomeScreen](apps/mobile/src/screens/TrackHomeScreen.tsx)) renders [AiChatScreen](apps/mobile/src/screens/AiChatScreen.tsx).
-- **Shell**: Content is wrapped in [EnvironmentContainer](apps/mobile/src/components/EnvironmentContainer.tsx) with `noPadding` and `solidBackground="#000000"` for the chat tab so the screen is edge-to-edge and deep black (no gradient).
-- **Entry**: `TrackHomeScreen` passes `onNavigateToWorkout` so the "Log Workout" pill can open the workout flow.
+- **Tab**: The **Hira** tab in the main bottom navigation ([TrackHomeScreen](apps/mobile/src/screens/TrackHomeScreen.tsx)) renders [ChatDrawerScreen](apps/mobile/src/screens/ChatDrawerScreen.tsx), not AiChatScreen directly.
+- **Shell**: `TrackHomeScreen` wraps content in [EnvironmentContainer](apps/mobile/src/components/EnvironmentContainer.tsx) with `solidBackground="#000000"` for the chat tab; footer is the bottom tab bar. Inside that, ChatDrawerScreen provides a Drawer navigator (independent `NavigationContainer`).
+- **Drawer**: Header (hamburger left, title "Hira", `headerRight: () => null`), custom sidebar (dark #111, "Chat History"), one screen "Chat" → [AiChatScreen](apps/mobile/src/screens/AiChatScreen.tsx).
 
 ### AiChatScreen – Build and Behavior
 
@@ -174,79 +176,64 @@ This section describes the AI wellness chat feature in full: where it lives, how
 
 **Layout (top to bottom)**:
 
-1. **Root**: `View` with `styles.safeArea` (flex 1, background `#000000`).
-2. **Header row**: Single row with left menu icon (Pressable), centered title "Hira AI", and right spacer (same width as former Clear button so title stays centered). No Clear button; no "Today HH:MM" timestamp row.
-3. **Body**: `KeyboardAvoidingView` (flex 1, `padding`/`height` behavior, iOS offset 90):
-   - **FlatList**: Messages with `contentContainerStyle` listContent (horizontal padding 16, vertical 12, flexGrow 1). Each item is a `ChatBubble`.
-   - **Quick action pills** (conditional): Horizontal `ScrollView` with three pills — "Log Workout" (plus icon), "Check Calories" (fire icon), "I'm not well" (heart icon). Rendered only when `!input.trim() && messages.length <= 1` (empty input and only the initial greeting). Pills are small: icon size 14, text fontSize 12, paddingVertical 8, paddingHorizontal 12, gap 6; row has paddingVertical 8. "Log Workout" calls `onNavigateToWorkout?.()`.
-   - **Input bar**: Row with left "+" button (placeholder), `TextInput` (placeholder "Ask about your health...", multiline, maxLength 4000), and right button: either `ActivityIndicator` when loading or `MicOrSendButton` (mic when empty, send arrow when there is text). Input bar has `paddingBottom: 10 + insets.bottom` for safe area above tab bar.
+1. **Root**: `SafeAreaView` (from `react-native-safe-area-context`), flex 1, background `#000`.
+2. **FlatList**: Messages; `contentContainerStyle` includes dynamic `paddingBottom: listBottomPadding` (when keyboard open: `keyboardBottomOffset + inputAreaHeight`; when closed: 120). Each item is a simple `View` (user: right, #007AFF; ai: left, #222).
+3. **Loading**: Optional `ActivityIndicator` below the list when waiting for API.
+4. **Input area** (absolute, left 0, right 0): `bottom: keyboardBottomOffset` when keyboard open, else 0. Contains:
+   - **Input bar**: Pill (#222) with left "+" (attach placeholder), center `TextInput` ("Type a message...", multiline), right circular gradient button (mic icon when input empty, send icon when text present). Mic triggers optional voice input (expo-speech-recognition); send submits the message.
+   - **Disclaimer**: "Hira AI can make mistakes. Check important info." (grey, below bar).
 
 **State**:
 
-- `messages`: array of `{ id, role, content, status?, time }`. Initial message is one assistant message (Hira greeting) with status `'done'`.
-- `input`: current input text.
-- `isLoading`: true while waiting for Gemini stream.
-- Refs: `flatListRef` (scroll to end), `streamingIdRef` (current streaming message id).
+- `messages`: `{ id, text, sender: 'user' | 'ai' }[]`.
+- `inputText`, `loading`, `apiKeyError`, `model` (GenerativeModel), `isListening` (voice), `keyboardBottomOffset`.
+- Refs: `flatListRef` for scroll-to-end.
+
+**Keyboard**:
+
+- `Keyboard.addListener('keyboardDidShow'/'keyboardWillShow')`: Compute offset from `Dimensions.get('window').height - e.endCoordinates.screenY` (fallback: `e.endCoordinates.height`). On Android, subtract 80 to reduce gap above keyboard. Set `keyboardBottomOffset`.
+- `keyboardDidHide`/`keyboardWillHide`: Set `keyboardBottomOffset` to 0.
+- Input wrapper uses `position: absolute` and `bottom: keyboardBottomOffset` so the bar sits above the keyboard.
 
 **Send flow**:
 
-1. User taps send (or equivalent); `handleSend` runs.
-2. Trimmed input is appended as a user message; a placeholder assistant message with `status: 'thinking'` is appended; list scrolls to end.
-3. `history` is built from `messages` + new user message as `{ role, content }[]` (user/assistant only).
-4. `sendGeminiMessage({ messages: history, onStream })` is called. Each streamed chunk updates the placeholder message content; when stream ends, status set to `'done'`. On error, that message gets `status: 'error'` and error text.
+1. User taps send (or voice fills input and user taps send). `sendMessage` runs.
+2. Append user message to `messages`; clear input; set loading.
+3. Build `history` from `messages` as `{ role: 'user'|'model', parts: [{ text }] }[]`.
+4. `model.startChat({ history }).sendMessage(userMessage.text)`; get `response.text()`, append AI message. On error, `Alert.alert`. No system instruction; only conversation is sent.
 
-**UI components (internal)**:
+**API key**: `Constants.expoConfig?.extra?.geminiApiKey ?? process.env.GEMINI_API_KEY` (set via app.config.js from `GEMINI_API_KEY` in .env).
 
-- **ChatBubble**: Renders one message. User messages right-aligned (purple bubble `#6C63FF`); assistant left-aligned (dark surface `#0a0a0a`). Shows `ThinkingDots` when status is `'thinking'`, error text when `'error'`, else `MessageContent` (parses markdown: bold, inline code, fenced code blocks).
-- **MessageContent**: Splits on code blocks and bold; renders `Text` and code `View` with theme colors.
-- **MicOrSendButton**: Animated toggle between mic and send icon based on `hasText`; on press when has text calls `onSend`.
+**Voice**: Optional `expo-speech-recognition` (require in try/catch). If available, mic button starts/stops recognition; transcript written to `inputText` via `useEffect` + `addListener('result')`.
 
-**Styling**: Local `COLORS` in AiChatScreen: bg/surface `#000000`, surfaceHigh `#0a0a0a`, border `#1a1a1a`, accent/userBubble `#6C63FF`, aiBubble `#0a0a0a`, text/muted/light, error. Styles for header, list, bubbles, thinking dots, input bar, pills, buttons — all in same file.
+### Gemini Integration (current chat)
 
-### System Prompts – Full Detail
-
-**File**: [apps/mobile/src/services/ai/system-prompts.ts](apps/mobile/src/services/ai/system-prompts.ts)
-
-The chat tab uses a **single master prompt** architecture: one identity, structured context, no query-type routing.
-
-- **HIRA_MASTER_PROMPT**: Full Hira identity (calm, emotionally intelligent wellness companion); role (supportive, reflection before instruction, options not commands, no medical diagnosis); primary behavior (acknowledge emotion first, use context, 1–3 next steps, under ~180 words, one voice); decision logic (emotional distress → validate; workout → energy + recovery; insights → summarize; unclear → one question); constraints (no medical advice, no push through pain, no shame).
-- **HIRA_MASTER_PROMPT_COMPACT**: Same content, shortened and bulletized for **Gemini 2.5 Flash Lite**; used as system instructions in AI Studio and in production.
-- **buildPrompt(context, options)**: Builds the full system prompt from `HiraRuntimeContext` (user.name, user.feeling, user.energy, user.recovery; optional intent, surface, behaviorMode). Appends CURRENT USER STATE and optional INTERACTION CONTEXT and RESPONSE MODE. `options.useCompact` selects compact variant (default true).
-- **wellnessToRuntimeContext(w, overrides)**: Maps `WellnessContext` to `HiraRuntimeContext` for use with `buildPrompt`.
-
-### Gemini Integration
-
-**File**: [apps/mobile/src/services/ai/gemini.service.ts](apps/mobile/src/services/ai/gemini.service.ts)
-
-- **Config**: API key from `EXPO_PUBLIC_GEMINI_API_KEY`; model `gemini-2.5-flash-lite`; temperature ~0.65 for chat; maxTokens 2048.
-- **API**: `sendGeminiMessage({ messages, context?, onStream?, config? })`. System instructions come from `buildPrompt(context ?? { user: { name: 'User' } }, { useCompact: true })`. Supports streaming via `onStream`.
-- **Flow**: AiChatScreen builds `history`, calls `sendGeminiMessage({ messages: history, onStream })`, and updates UI on stream and completion/error.
+- **SDK**: [@google/generative-ai](https://www.npmjs.com/package/@google/generative-ai) — `GoogleGenerativeAI`, `getGenerativeModel({ model: 'gemini-2.5-flash-lite' })`, `startChat({ history })`, `sendMessage(text)`.
+- **No system instruction**: Only the conversation (user/model messages) is sent; no separate system prompt or context builder in this flow.
+- **Optional**: [gemini.service.ts](apps/mobile/src/services/ai/gemini.service.ts) exists for streaming/other use; production AI services (v2, Anthropic/OpenRouter) remain available for future use.
 
 ### Data Flow (AI Chat tab)
 
 ```mermaid
 flowchart LR
-  User[User types and sends] --> AiChat[AiChatScreen handleSend]
-  AiChat --> History[Build history array]
-  History --> Gemini[sendGeminiMessage]
-  Gemini --> Build[buildPrompt from system-prompts.ts]
-  Build --> Gemini
-  Gemini --> API[Gemini API stream]
-  API --> OnStream[onStream delta]
-  OnStream --> AiChat
-  AiChat --> FlatList[FlatList update bubble]
+  User[User types / voice] --> AiChat[AiChatScreen]
+  AiChat --> History[Build history user/model]
+  History --> SDK[model.startChat.sendMessage]
+  SDK --> API[Gemini API]
+  API --> AiChat
+  AiChat --> FlatList[FlatList append AI message]
 ```
 
 ### File Reference (AI Chat)
 
 | Purpose | File |
 |--------|------|
+| Drawer shell (Hira tab) | [ChatDrawerScreen.tsx](apps/mobile/src/screens/ChatDrawerScreen.tsx) |
 | Chat UI | [AiChatScreen.tsx](apps/mobile/src/screens/AiChatScreen.tsx) |
-| System prompts | [system-prompts.ts](apps/mobile/src/services/ai/system-prompts.ts) |
-| Gemini client | [gemini.service.ts](apps/mobile/src/services/ai/gemini.service.ts) |
-| Tab shell / chat tab | [TrackHomeScreen.tsx](apps/mobile/src/screens/TrackHomeScreen.tsx) |
-| Container (noPadding, solidBackground) | [EnvironmentContainer.tsx](apps/mobile/src/components/EnvironmentContainer.tsx) |
-| Context building (for future use) | [context-builder.service.ts](apps/mobile/src/services/ai/context-builder.service.ts), [context-formatter.service.ts](apps/mobile/src/services/ai/context-formatter.service.ts) |
+| Tab shell | [TrackHomeScreen.tsx](apps/mobile/src/screens/TrackHomeScreen.tsx) |
+| Container (solidBackground) | [EnvironmentContainer.tsx](apps/mobile/src/components/EnvironmentContainer.tsx) |
+| Optional Gemini service | [gemini.service.ts](apps/mobile/src/services/ai/gemini.service.ts) |
+| Context building (other flows) | [context-builder.service.ts](apps/mobile/src/services/ai/context-builder.service.ts), [context-formatter.service.ts](apps/mobile/src/services/ai/context-formatter.service.ts) |
 
 ---
 
@@ -305,15 +292,16 @@ hira-ai-app-capacitor/
                                # useUserStreaks, useUserXp (unused in UI), useCommunityFeed,
                                # useCommunityActions, useTodayWorkoutStats, ...
         lib/                   # supabase.ts, react-query.ts
-        screens/               # AuthScreen, OnboardingScreen, TrackHomeScreen, AiChatScreen,
-                               # WorkoutTrackerScreen, TemplateCreateScreen, TemplateSessionScreen,
-                               # MyWorkoutsScreen, ExerciseSearchScreen, ProgramScreen,
-                               # CreateProgramScreen, ActivityAnalyticsScreen, WorkoutInsightsScreen,
-                               # WorkoutHistoryScreen, WorkoutSessionDetailScreen, ShopHomeScreen,
-                               # CartScreen, ProfileScreen, PersonalInfoScreen, CommunityScreen,
-                               # CreatePostScreen, ActivityTypeWorkoutsScreen, ExercisesScreen, ...
-        services/              # ai-chat.service.ts, ai-context.service.ts,
-                               # ai/system-prompts.ts, ai/gemini.service.ts,
+        screens/               # AuthScreen, OnboardingScreen, TrackHomeScreen, ChatDrawerScreen,
+                               # AiChatScreen, WorkoutTrackerScreen, TemplateCreateScreen,
+                               # TemplateSessionScreen, MyWorkoutsScreen, ExerciseSearchScreen,
+                               # ProgramScreen, CreateProgramScreen, ActivityAnalyticsScreen,
+                               # WorkoutInsightsScreen, WorkoutHistoryScreen, WorkoutSessionDetailScreen,
+                               # ShopHomeScreen, CartScreen, ProfileScreen, PersonalInfoScreen,
+                               # CommunityScreen, CreatePostScreen, ActivityTypeWorkoutsScreen,
+                               # ExercisesScreen, ...
+        services/              # ai-chat.service.ts, ai-context.service.ts, ai/gemini.service.ts,
+                               # ai/context-builder.service.ts, ai/context-formatter.service.ts,
                                # HealthService.ts, HealthNormalizer.ts, ...
         theme.ts
         App.tsx
@@ -378,10 +366,10 @@ hira-ai-app-capacitor/
 
 **4-week restructuring completed**: AI chat v2 (usage limits, suggestions, history), `features/` re-exports (ai, shop, community, workout), path alias `@/*`, 5-tab nav (Profile replaces Progress), CHANGELOG and PROJECT_SUMMARY updated. Optional: React.memo on list items, device testing, EAS/TestFlight build.
 
-**AI Chat (Hira)**: Chat tab uses Gemini 2.5 Flash Lite via `gemini.service.ts` with a single master prompt in `system-prompts.ts` (`buildPrompt` + `HIRA_MASTER_PROMPT_COMPACT`). No Ollama; one identity, structured context (`HiraRuntimeContext`), optional behavior mode. AiChatScreen: deep black edge-to-edge UI, no Clear button or Today timestamp, small quick-action pills (Log Workout, Check Calories, I'm not well) shown only when input empty and at most one message; streaming with thinking/error states. PROJECT_SUMMARY includes full "AI Chat (Hira) – End-to-End" section with master prompt architecture and Gemini data flow.
+**AI Chat (Hira)**: Hira tab renders **ChatDrawerScreen** (Drawer: hamburger, sidebar "Chat History", header "Hira", no top-right icons). **AiChatScreen** uses **@google/generative-ai** with **gemini-2.5-flash-lite**; API key from app config (`GEMINI_API_KEY`). No system instruction — only conversation history is sent. Minimal UI: FlatList messages, absolute input bar (pill with +, TextInput, mic/send gradient button), disclaimer. Optional **expo-speech-recognition** for voice input (try/catch require). Keyboard: `Keyboard.addListener` + `keyboardBottomOffset` so input bar sits above keyboard (Android offset −80 to reduce gap). SafeAreaView from `react-native-safe-area-context`.
 
 **Upcoming Priorities**:
 1. **Checkout Flow**: Complete Shop payment integration.
 2. **Offline Mode**: Harden offline behavior in services and sync.
-3. **AI**: Optional cache for duplicate prompts; voice/attach for Hira (future).
+3. **AI**: Voice (expo-speech-recognition) is optional in Hira; attach/+ button is placeholder. Optional cache for duplicate prompts; production API integration (v2, usage limits) for future.
 

@@ -18,6 +18,12 @@ if (fs.existsSync(envPath)) {
       process.env.EXPO_PUBLIC_OPENROUTER_API_KEY = value;
       return;
     }
+    match = line.match(/^GEMINI_API_KEY=(.+)$/);
+    if (match) {
+      const value = match[1].trim().replace(/^["']|["']$/g, '');
+      process.env.GEMINI_API_KEY = value;
+      return;
+    }
   });
 }
 
@@ -26,10 +32,12 @@ const appJson = require('./app.json');
 module.exports = {
   expo: {
     ...appJson.expo,
+    plugins: [...(appJson.expo.plugins || [])],
     extra: {
       ...appJson.expo.extra,
       anthropicApiKey: process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY || '',
       openrouterApiKey: process.env.EXPO_PUBLIC_OPENROUTER_API_KEY || '',
+      geminiApiKey: process.env.GEMINI_API_KEY || '',
     },
   },
 };

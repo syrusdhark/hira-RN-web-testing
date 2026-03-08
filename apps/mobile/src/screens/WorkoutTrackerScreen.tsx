@@ -11,8 +11,9 @@ import {
   ActivityIndicator,
   ImageBackground,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useWorkoutTemplates } from '../hooks/useWorkoutTemplates';
+import { useWorkoutTemplates, computeActivityTypeFromRow, formatActivityTypeLabel } from '../hooks/useWorkoutTemplates';
 import { useExercises } from '../hooks/useExerciseSearch';
 import { useProgramSchedule } from '../hooks/useProgramSchedule';
 import { useUserStreaks } from '../hooks/useUserStreaks';
@@ -59,8 +60,12 @@ export function WorkoutTrackerScreen({
   onNavigateToProfile,
   showBackButton = true,
 }: WorkoutTrackerScreenProps) {
+  const insets = useSafeAreaInsets();
   const paddingTop = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) + 16 : 56;
-  const activityTypeCardWidth = Dimensions.get('window').width * 0.40;
+  const paddingLeft = Math.max(insets.left, space.xs);
+  const paddingRight = Math.max(insets.right, space.xs);
+  const contentWidth = Dimensions.get('window').width - paddingLeft - paddingRight;
+  const activityTypeCardWidth = contentWidth * 0.40;
   const activityTypeCardHeight = 140;
   const { data: streaks = [], isLoading: streaksLoading } = useUserStreaks();
   const mainStreak = streaks.find((s) => s.streak_type === 'workout' || s.streak_type === 'overall');
@@ -103,10 +108,10 @@ export function WorkoutTrackerScreen({
     <View style={styles.container}>
       {showBackButton ? <FloatingBackButton onPress={() => navigation?.goBack()} /> : null}
 
-      <View style={[styles.header, { paddingTop }]} />
+      <View style={[styles.header, { paddingTop, paddingLeft, paddingRight }]} />
 
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingLeft, paddingRight }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.streakDayRow}>
@@ -134,6 +139,56 @@ export function WorkoutTrackerScreen({
             hideCta
           />
         </View>
+
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>Workouts</Text>
+          <Pressable onPress={onNavigateToMyWorkouts}>
+            <Text style={styles.seeAll}>See all</Text>
+          </Pressable>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.horizontalScroll}
+        >
+          {isLoading ? (
+            <ActivityIndicator color={colors.bodyOrange} />
+          ) : templates.length === 0 ? (
+            <Text style={{ color: colors.textSecondary, marginLeft: space.md }}>No workouts found. Create one to get started!</Text>
+          ) : (
+            templates.map(t => {
+              const activitySource = t.activity_type != null
+                ? { activity_type: t.activity_type, activity_type_tags: t.activity_type_tags ?? null }
+                : computeActivityTypeFromRow(t);
+              const activityLabel = formatActivityTypeLabel(activitySource);
+              const exerciseCount = (t as any).exercise_count ?? (t as any).workout_template_exercises?.length ?? (t as any).workout_template_exercises?.[0]?.count ?? 0;
+              return (
+                <Pressable key={t.id} onPress={() => onStartTemplate?.(t.id)}>
+                  <LinearGradient
+                    colors={['#424242', '#18181b']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 0, y: 1 }}
+                    style={[styles.templateCard, { width: activityTypeCardWidth, height: activityTypeCardHeight }]}
+                  >
+                    {activityLabel ? (
+                      <View style={styles.activityTypeTag}>
+                        <Text style={styles.activityTypeTagText} numberOfLines={1}>{activityLabel}</Text>
+                      </View>
+                    ) : null}
+                    <Text style={styles.templateTitle} numberOfLines={2}>{t.title}</Text>
+
+                    <View style={styles.templateStats}>
+                      <View style={styles.statRow}>
+                        <MaterialCommunityIcons name="dumbbell" size={14} color={colors.textTertiary} />
+                        <Text style={styles.statText}>{exerciseCount} Exercises</Text>
+                      </View>
+                    </View>
+                  </LinearGradient>
+                </Pressable>
+              );
+            }))}
+        </ScrollView>
 
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Exercises</Text>
@@ -205,47 +260,6 @@ export function WorkoutTrackerScreen({
         </ScrollView>
 
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Workouts</Text>
-          <Pressable onPress={onNavigateToMyWorkouts}>
-            <Text style={styles.seeAll}>See all</Text>
-          </Pressable>
-        </View>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.horizontalScroll}
-        >
-          {isLoading ? (
-            <ActivityIndicator color={colors.bodyOrange} />
-          ) : templates.length === 0 ? (
-            <Text style={{ color: colors.textSecondary, marginLeft: space.md }}>No workouts found. Create one to get started!</Text>
-          ) : (
-            templates.map(t => (
-              <Pressable key={t.id} onPress={() => onStartTemplate?.(t.id)}>
-                <LinearGradient
-                  colors={['#424242', '#18181b']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 0, y: 1 }}
-                  style={[styles.templateCard, { width: activityTypeCardWidth, height: activityTypeCardHeight }]}
-                >
-                  <View style={styles.difficultyTag}>
-                    <Text style={[styles.difficultyText, { color: colors.actionAmber }]}>{t.difficulty_level ?? '--'}</Text>
-                  </View>
-                  <Text style={styles.templateTitle} numberOfLines={2}>{t.title}</Text>
-
-                  <View style={styles.templateStats}>
-                    <View style={styles.statRow}>
-                      <MaterialCommunityIcons name="dumbbell" size={14} color={colors.textTertiary} />
-                      <Text style={styles.statText}>{t.workout_template_exercises?.[0]?.count || 0} Exercises</Text>
-                    </View>
-                  </View>
-                </LinearGradient>
-              </Pressable>
-            )))}
-        </ScrollView>
-
-        <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Marketplace</Text>
         </View>
 
@@ -263,12 +277,10 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: space.md,
     paddingBottom: space.xs,
     alignItems: 'center',
   },
   content: {
-    paddingHorizontal: space.md,
     paddingTop: space.sm,
   },
   streakDayRow: {
@@ -402,7 +414,7 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSubtle,
     justifyContent: 'space-between',
   },
-  difficultyTag: {
+  activityTypeTag: {
     alignSelf: 'flex-start',
     backgroundColor: colors.bgElevated,
     paddingHorizontal: 8,
@@ -410,9 +422,10 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginBottom: space.sm,
   },
-  difficultyText: {
+  activityTypeTagText: {
     fontSize: 11,
     fontWeight: '700',
+    color: colors.actionAmber,
   },
   templateTitle: {
     color: colors.textPrimary,

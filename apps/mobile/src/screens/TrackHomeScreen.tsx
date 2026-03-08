@@ -5,7 +5,7 @@ import { BottomTabBar, TabConfig } from '../components/BottomTabBar';
 import { EnvironmentContainer } from '../components/EnvironmentContainer';
 import { colors } from '../theme';
 import { ShopHomeScreen } from './ShopHomeScreen';
-import { AiChatScreen } from './AiChatScreen';
+import { ChatDrawerScreen } from './ChatDrawerScreen';
 import { CommunityScreen } from './CommunityScreen';
 import { WorkoutTrackerScreen } from './WorkoutTrackerScreen';
 import { ProfileScreen } from './ProfileScreen';
@@ -95,11 +95,7 @@ export function TrackHomeScreen({
           />
         );
       case 'chat':
-        return (
-          <AiChatScreen
-            onNavigateToWorkout={onNavigateToWorkout}
-          />
-        );
+        return <ChatDrawerScreen />;
       case 'profile':
         return (
           <ProfileScreen

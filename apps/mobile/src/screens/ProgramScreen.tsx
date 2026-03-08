@@ -203,7 +203,7 @@ export function ProgramScreen({ navigation, onStartProgramDay, onViewProgramDay,
         <View style={styles.dropdownActions}>
           <Pressable
             style={({ pressed }) => [styles.dropdownButton, styles.dropdownButtonSecondary, pressed && { opacity: 0.8 }]}
-            onPress={() => handleViewDay(day)}
+            onPress={() => handleStartDay(day)}
           >
             <Text style={styles.dropdownButtonSecondaryText}>Start</Text>
           </Pressable>
@@ -355,7 +355,7 @@ export function ProgramScreen({ navigation, onStartProgramDay, onViewProgramDay,
                 <Text style={styles.modalEmpty}>No workouts yet. Create one in My Workouts.</Text>
               ) : (
                 templates.map((t: any) => {
-                  const count = t.workout_template_exercises?.[0]?.count ?? 0;
+                  const count = t.exercise_count ?? t.workout_template_exercises?.[0]?.count ?? (Array.isArray(t.workout_template_exercises) ? t.workout_template_exercises.length : 0) ?? 0;
                   return (
                     <Pressable
                       key={t.id}
