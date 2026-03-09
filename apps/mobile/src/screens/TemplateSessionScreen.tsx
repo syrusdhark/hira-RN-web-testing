@@ -16,6 +16,7 @@ import { USER_STREAKS_KEY } from '../hooks/useUserStreaks';
 import { USER_ACHIEVEMENTS_KEY } from '../hooks/useUserAchievements';
 import { useActiveWorkout } from '../hooks/useActiveWorkoutStore';
 import { useWorkoutTimer, formatWorkoutTime } from '../hooks/useWorkoutTimer';
+import { useCreateWorkoutTemplate } from '../hooks/useWorkoutTemplates';
 
 interface Set {
     id: string;
@@ -206,6 +207,8 @@ export function TemplateSessionScreen({
     const [sessionTitle, setSessionTitle] = useState<string>('Workout');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [saveTemplateVisible, setSaveTemplateVisible] = useState(false);
+    const [templateName, setTemplateName] = useState<string>('');
     const [exerciseMenuExerciseId, setExerciseMenuExerciseId] = useState<string | null>(null);
     const [columnEditorExerciseId, setColumnEditorExerciseId] = useState<string | null>(null);
     const [setTagMenuAnchor, setSetTagMenuAnchor] = useState<{ exerciseId: string; setId: string } | null>(null);
@@ -215,6 +218,7 @@ export function TemplateSessionScreen({
     const setTagButtonRefs = useRef<Record<string, View | null>>({});
     const hasConsumedInitialExercises = useRef(false);
     const { state: activeWorkout, startSession, markPersistedSessionId, clearSession } = useActiveWorkout();
+    const createTemplate = useCreateWorkoutTemplate();
 
     const elapsedSeconds = useWorkoutTimer({
         startedAt: activeWorkout.startedAt,
@@ -697,6 +701,51 @@ export function TemplateSessionScreen({
         }
     };
 
+    const handleSaveTemplatePress = () => {
+        if (exercises.length === 0) {
+            Alert.alert('Save workout', 'Add at least one exercise before saving this workout as a template.');
+            return;
+        }
+        const baseName = (sessionTitle || 'Workout').trim() || 'Workout';
+        setTemplateName(baseName);
+        setSaveTemplateVisible(true);
+    };
+
+    const handleConfirmSaveTemplate = () => {
+        if (createTemplate.isPending) return;
+        const name = (templateName || sessionTitle || 'Workout').trim() || 'Workout';
+        if (!name) {
+            Alert.alert('Save workout', 'Please enter a name for this workout.');
+            return;
+        }
+
+        const templateExercises = exercises.map((ex) => ({
+            originalId: ex.exerciseId ?? '',
+            name: ex.name,
+            sets: ex.sets.map((set) => ({
+                reps: (set.values?.reps ?? '').trim(),
+            })),
+        }));
+
+        createTemplate.mutate(
+            { title: name, description: '', exercises: templateExercises },
+            {
+                onSuccess: () => {
+                    setSaveTemplateVisible(false);
+                    Alert.alert('Saved', 'Workout saved to your templates.');
+                },
+                onError: (err) => {
+                    console.error('Save template error:', err);
+                    const message =
+                        err instanceof Error
+                            ? err.message
+                            : 'Could not save workout template. Please try again.';
+                    Alert.alert('Error', message);
+                },
+            }
+        );
+    };
+
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" />
@@ -707,6 +756,21 @@ export function TemplateSessionScreen({
                 <View style={styles.appBarOverlay} />
                 <View style={[styles.appBarTitleWrap, { top: paddingTop, height: 44 }]}>
                     <Text style={styles.appBarTimer}>{formatWorkoutTime(elapsedSeconds)}</Text>
+                    <Pressable
+                        style={styles.saveTemplateButton}
+                        onPress={handleSaveTemplatePress}
+                        disabled={createTemplate.isPending}
+                        accessibilityLabel="Save workout as template"
+                    >
+                        <Text
+                            style={[
+                                styles.saveTemplateText,
+                                createTemplate.isPending && { opacity: 0.6 },
+                            ]}
+                        >
+                            {createTemplate.isPending ? 'Saving…' : 'Save'}
+                        </Text>
+                    </Pressable>
                 </View>
             </View>
 
@@ -1025,6 +1089,55 @@ export function TemplateSessionScreen({
                     </Pressable>
                 </Pressable>
             </Modal>
+
+            <Modal
+                visible={saveTemplateVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={() => {
+                    if (!createTemplate.isPending) setSaveTemplateVisible(false);
+                }}
+            >
+                <Pressable
+                    style={styles.modalBackdrop}
+                    onPress={() => {
+                        if (!createTemplate.isPending) setSaveTemplateVisible(false);
+                    }}
+                >
+                    <Pressable
+                        style={[styles.overlayCard, styles.saveTemplateCard]}
+                        onPress={(e) => e.stopPropagation?.()}
+                    >
+                        <Text style={styles.saveTemplateTitle}>Save workout as template</Text>
+                        <TextInput
+                            style={styles.saveTemplateInput}
+                            value={templateName}
+                            onChangeText={setTemplateName}
+                            placeholder="Template name"
+                            placeholderTextColor={colors.textTertiary}
+                        />
+                        <View style={styles.saveTemplateActions}>
+                            <Pressable
+                                style={styles.saveTemplateCancel}
+                                onPress={() => {
+                                    if (!createTemplate.isPending) setSaveTemplateVisible(false);
+                                }}
+                            >
+                                <Text style={styles.saveTemplateCancelText}>Cancel</Text>
+                            </Pressable>
+                            <Pressable
+                                style={styles.saveTemplateConfirm}
+                                onPress={handleConfirmSaveTemplate}
+                                disabled={createTemplate.isPending}
+                            >
+                                <Text style={styles.saveTemplateConfirmText}>
+                                    {createTemplate.isPending ? 'Saving…' : 'Save'}
+                                </Text>
+                            </Pressable>
+                        </View>
+                    </Pressable>
+                </Pressable>
+            </Modal>
         </View>
     );
 }
@@ -1062,6 +1175,19 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: colors.textPrimary,
         fontVariant: ['tabular-nums'],
+    },
+    saveTemplateButton: {
+        position: 'absolute',
+        right: 20,
+        top: 8,
+        paddingHorizontal: space.sm,
+        paddingVertical: 6,
+        borderRadius: radius.md,
+    },
+    saveTemplateText: {
+        ...typography.sm,
+        fontWeight: '700',
+        color: colors.bodyOrange,
     },
     screenHeading: {
         fontSize: 28,
@@ -1336,6 +1462,53 @@ const styles = StyleSheet.create({
         minWidth: 160,
         borderWidth: 1,
         borderColor: colors.borderSubtle,
+    },
+    saveTemplateCard: {
+        padding: space.lg,
+        minWidth: 260,
+        maxWidth: 320,
+    },
+    saveTemplateTitle: {
+        ...typography.lg,
+        fontWeight: '700',
+        color: colors.textPrimary,
+        marginBottom: space.md,
+        textAlign: 'center',
+    },
+    saveTemplateInput: {
+        borderRadius: radius.md,
+        borderWidth: 1,
+        borderColor: colors.borderDefault,
+        paddingHorizontal: space.md,
+        paddingVertical: 10,
+        color: colors.textPrimary,
+        marginBottom: space.md,
+    },
+    saveTemplateActions: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        gap: space.sm,
+        marginTop: space.sm,
+    },
+    saveTemplateCancel: {
+        paddingHorizontal: space.md,
+        paddingVertical: 8,
+    },
+    saveTemplateCancelText: {
+        ...typography.base,
+        color: colors.textSecondary,
+        fontWeight: '600',
+    },
+    saveTemplateConfirm: {
+        paddingHorizontal: space.md,
+        paddingVertical: 8,
+        borderRadius: radius.md,
+        backgroundColor: colors.bodyOrange,
+    },
+    saveTemplateConfirmText: {
+        ...typography.base,
+        color: colors.bgMidnight,
+        fontWeight: '700',
     },
     overlayDeleteButton: {
         flexDirection: 'row',
