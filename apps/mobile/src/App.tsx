@@ -43,6 +43,7 @@ import { ProfileProvider, useProfile } from './context/ProfileContext';
 import { CartScreen } from './screens/CartScreen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ActiveWorkoutProvider } from './hooks/useActiveWorkoutStore';
 
 const AuthStack = createNativeStackNavigator();
 
@@ -251,8 +252,9 @@ export default function App() {
         <QueryClientProvider client={queryClient}>
           <CartProvider>
             <ProfileProvider>
-              <AuthenticatedLayout resetToScreen={resetToScreen} currentScreen={currentScreen}>
-                <StatusBar style="light" />
+              <ActiveWorkoutProvider>
+                <AuthenticatedLayout resetToScreen={resetToScreen} currentScreen={currentScreen}>
+                  <StatusBar style="light" />
                 {currentScreen === 'track' ? (
                   <TrackHomeScreen
                     activeTab={trackActiveTab}
@@ -516,7 +518,8 @@ export default function App() {
                     }}
                   />
                 </Modal>
-              </AuthenticatedLayout>
+                </AuthenticatedLayout>
+              </ActiveWorkoutProvider>
             </ProfileProvider>
           </CartProvider>
         </QueryClientProvider>

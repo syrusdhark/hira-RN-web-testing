@@ -22,6 +22,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { colors, radius, space, typography } from '../theme';
 import { FloatingBackButton } from '../components/FloatingBackButton';
 import { NextWorkoutCard } from '../components/OverviewCards';
+import { useActiveWorkout } from '../hooks/useActiveWorkoutStore';
+import { useWorkoutTimer, formatWorkoutTime } from '../hooks/useWorkoutTimer';
 
 const ACTIVITY_TYPES = [
   { source: require('../../assets/bodybuilding.jpg'), title: 'Bodybuilding' },
@@ -103,6 +105,15 @@ export function WorkoutTrackerScreen({
   const templates = (templatesData ?? []).slice(0, 5);
   const { data: exercisesList = [], isLoading: exercisesLoading } = useExercises();
   const exercisesCarouselSlice = exercisesList.slice(0, 12);
+  const { state: activeWorkout } = useActiveWorkout();
+
+  const hasActiveOverlay = !showBackButton && activeWorkout.active && !!activeWorkout.startedAt;
+  const overlaySeconds = useWorkoutTimer({
+    startedAt: hasActiveOverlay ? activeWorkout.startedAt : null,
+    elapsedOffsetSeconds: activeWorkout.elapsedOffsetSeconds,
+    isRunning: hasActiveOverlay,
+  });
+  const overlayTitle = activeWorkout.title || 'Workout';
 
   return (
     <View style={styles.container}>
@@ -263,8 +274,28 @@ export function WorkoutTrackerScreen({
           <Text style={styles.sectionTitle}>Marketplace</Text>
         </View>
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: hasActiveOverlay ? 120 : 40 }} />
       </ScrollView>
+
+      {hasActiveOverlay ? (
+        <Pressable
+          style={styles.activeOverlay}
+          onPress={() => {
+            if (activeWorkout.templateId && onStartTemplate) {
+              onStartTemplate(activeWorkout.templateId);
+            } else if (onNavigateToProgram) {
+              onNavigateToProgram();
+            }
+          }}
+        >
+          <Text style={styles.activeOverlayTitle} numberOfLines={1}>
+            {overlayTitle}
+          </Text>
+          <Text style={styles.activeOverlayTimer}>
+            {formatWorkoutTime(overlaySeconds)}
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -446,6 +477,37 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 12,
     fontWeight: '500',
+  },
+  activeOverlay: {
+    position: 'absolute',
+    left: space.md,
+    right: space.md,
+    bottom: space.lg,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.md,
+    borderRadius: radius.xl,
+    backgroundColor: colors.bgCharcoal,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    // drop shadow
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 10,
+  },
+  activeOverlayTitle: {
+    ...typography.sm,
+    color: colors.textPrimary,
+    fontWeight: '600',
+    flexShrink: 1,
+    marginRight: space.sm,
+  },
+  activeOverlayTimer: {
+    ...typography.base,
+    color: colors.textPrimary,
+    fontVariant: ['tabular-nums'],
   },
 
 });

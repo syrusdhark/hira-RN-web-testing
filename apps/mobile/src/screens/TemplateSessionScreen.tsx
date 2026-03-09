@@ -14,6 +14,8 @@ import { PROGRAM_SCHEDULE_KEY } from '../hooks/useProgramSchedule';
 import { USER_XP_KEY } from '../hooks/useUserXp';
 import { USER_STREAKS_KEY } from '../hooks/useUserStreaks';
 import { USER_ACHIEVEMENTS_KEY } from '../hooks/useUserAchievements';
+import { useActiveWorkout } from '../hooks/useActiveWorkoutStore';
+import { useWorkoutTimer, formatWorkoutTime } from '../hooks/useWorkoutTimer';
 
 interface Set {
     id: string;
@@ -200,7 +202,6 @@ export function TemplateSessionScreen({
 }: TemplateSessionScreenProps) {
     const queryClient = useQueryClient();
     const paddingTop = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 16 : 60;
-    const [elapsedTime, setElapsedTime] = useState(0);
     const [exercises, setExercises] = useState<Exercise[]>([]);
     const [sessionTitle, setSessionTitle] = useState<string>('Workout');
     const [loading, setLoading] = useState(true);
@@ -213,6 +214,13 @@ export function TemplateSessionScreen({
     const exerciseMenuButtonRefs = useRef<Record<string, View | null>>({});
     const setTagButtonRefs = useRef<Record<string, View | null>>({});
     const hasConsumedInitialExercises = useRef(false);
+    const { state: activeWorkout, startSession, markPersistedSessionId, clearSession } = useActiveWorkout();
+
+    const elapsedSeconds = useWorkoutTimer({
+        startedAt: activeWorkout.startedAt,
+        elapsedOffsetSeconds: activeWorkout.elapsedOffsetSeconds,
+        isRunning: activeWorkout.active,
+    });
 
     useEffect(() => {
         if (!exerciseMenuExerciseId) {
@@ -240,6 +248,18 @@ export function TemplateSessionScreen({
             });
         }
     }, [setTagMenuAnchor]);
+
+    // Ensure there is an active workout session while this screen is mounted.
+    useEffect(() => {
+        if (!activeWorkout.active) {
+            startSession({
+                templateId: templateId ?? null,
+                workoutProgramId: workoutProgramId ?? null,
+                workoutProgramDayId: workoutProgramDayId ?? null,
+                title: 'Workout',
+            });
+        }
+    }, [activeWorkout.active, startSession, templateId, workoutProgramId, workoutProgramDayId]);
 
     // When no templateId: stop loading; when initialExercises provided, apply once
     useEffect(() => {
@@ -427,19 +447,6 @@ export function TemplateSessionScreen({
         };
     }, [templateId]);
 
-    // Timer logic
-    useEffect(() => {
-        const timer = setInterval(() => setElapsedTime(prev => prev + 1), 1000);
-        return () => clearInterval(timer);
-    }, []);
-
-    const formatTime = (seconds: number) => {
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        const s = seconds % 60;
-        return `${h < 10 ? '0' : ''}${h}:${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
-    };
-
     const handleAddExercise = () => {
         if (onAddExercise) {
             onAddExercise((exercise) => {
@@ -565,7 +572,7 @@ export function TemplateSessionScreen({
         }
         setSaving(true);
         try {
-            const duration_minutes = Math.floor(elapsedTime / 60) || null;
+            const duration_minutes = Math.floor(elapsedSeconds / 60) || null;
             const isFromProgram = !!(workoutProgramId && workoutProgramDayId);
             const { data: sessionRow, error: sessionError } = await supabase
                 .from('workout_sessions')
@@ -591,6 +598,7 @@ export function TemplateSessionScreen({
             }
 
             const sessionId = sessionRow.id;
+            markPersistedSessionId(sessionId);
 
             // Validate required fields for all sets that have any value
             for (const ex of exercises) {
@@ -679,6 +687,7 @@ export function TemplateSessionScreen({
             queryClient.invalidateQueries({ queryKey: USER_STREAKS_KEY });
             queryClient.invalidateQueries({ queryKey: USER_ACHIEVEMENTS_KEY });
             await queryClient.refetchQueries({ queryKey: WORKOUT_SESSIONS_KEY });
+            clearSession();
             navigation?.goBack();
         } catch (e) {
             console.error('Finish workout error:', e);
@@ -697,7 +706,7 @@ export function TemplateSessionScreen({
             <View style={[styles.appBar, { paddingTop, height: paddingTop + 44 }]} pointerEvents="box-none">
                 <View style={styles.appBarOverlay} />
                 <View style={[styles.appBarTitleWrap, { top: paddingTop, height: 44 }]}>
-                    <Text style={styles.appBarTimer}>{formatTime(elapsedTime)}</Text>
+                    <Text style={styles.appBarTimer}>{formatWorkoutTime(elapsedSeconds)}</Text>
                 </View>
             </View>
 
@@ -863,7 +872,14 @@ export function TemplateSessionScreen({
                             'Your progress will not be saved.',
                             [
                                 { text: 'Cancel', style: 'cancel' },
-                                { text: 'Discard', style: 'destructive', onPress: () => navigation?.goBack() },
+                                {
+                                    text: 'Discard',
+                                    style: 'destructive',
+                                    onPress: () => {
+                                        clearSession();
+                                        navigation?.goBack();
+                                    },
+                                },
                             ]
                         );
                     }}
