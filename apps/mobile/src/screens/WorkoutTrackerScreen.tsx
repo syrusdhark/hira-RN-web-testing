@@ -36,11 +36,10 @@ const ACTIVITY_TYPES = [
 type WorkoutTrackerScreenProps = {
   navigation?: { goBack: () => void };
   onNavigateToProgram?: () => void;
-  onNavigateToTemplateCreate?: () => void;
   onNavigateToMyWorkouts?: () => void;
+  onStartNewWorkout?: () => void;
   onNavigateToActivityType?: (activityType: string) => void;
   onStartTemplate?: (templateId: string) => void;
-  onEditTemplate?: (templateId: string) => void;
   onNavigateToWorkoutInsights?: () => void;
   onOpenExerciseDetail?: (exerciseId: string, exerciseName: string) => void;
   onNavigateToExercises?: () => void;
@@ -51,11 +50,10 @@ type WorkoutTrackerScreenProps = {
 export function WorkoutTrackerScreen({
   navigation,
   onNavigateToProgram,
-  onNavigateToTemplateCreate,
   onNavigateToMyWorkouts,
+  onStartNewWorkout,
   onNavigateToActivityType,
   onStartTemplate,
-  onEditTemplate,
   onNavigateToWorkoutInsights,
   onOpenExerciseDetail,
   onNavigateToExercises,
@@ -153,9 +151,16 @@ export function WorkoutTrackerScreen({
 
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Workouts</Text>
-          <Pressable onPress={onNavigateToMyWorkouts}>
-            <Text style={styles.seeAll}>See all</Text>
-          </Pressable>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+            {onStartNewWorkout ? (
+              <Pressable onPress={onStartNewWorkout}>
+                <Text style={styles.seeAll}>Start workout</Text>
+              </Pressable>
+            ) : null}
+            <Pressable onPress={onNavigateToMyWorkouts}>
+              <Text style={styles.seeAll}>See all</Text>
+            </Pressable>
+          </View>
         </View>
 
         <ScrollView
@@ -166,7 +171,13 @@ export function WorkoutTrackerScreen({
           {isLoading ? (
             <ActivityIndicator color={colors.bodyOrange} />
           ) : templates.length === 0 ? (
-            <Text style={{ color: colors.textSecondary, marginLeft: space.md }}>No workouts found. Create one to get started!</Text>
+            onStartNewWorkout ? (
+              <Pressable onPress={onStartNewWorkout} style={{ marginLeft: space.md }}>
+                <Text style={{ color: colors.bodyOrange, fontSize: 14, fontWeight: '600' }}>No workouts yet. Start workout to create one.</Text>
+              </Pressable>
+            ) : (
+              <Text style={{ color: colors.textSecondary, marginLeft: space.md }}>No workouts found. Create one from My Workouts.</Text>
+            )
           ) : (
             templates.map(t => {
               const activitySource = t.activity_type != null

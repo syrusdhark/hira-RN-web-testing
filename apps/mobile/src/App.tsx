@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Constants from 'expo-constants';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator, BackHandler, Platform, Modal, Text } from 'react-native';
+import { View, ActivityIndicator, BackHandler, Platform, Modal, Text, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Session } from '@supabase/supabase-js';
 import { NavigationContainer } from '@react-navigation/native';
@@ -117,8 +117,9 @@ export default function App() {
   };
 
   const handleEditTemplate = (templateId: string, _returnScreen: 'track' | 'workout' = 'workout') => {
-    setEditingTemplateId(templateId);
-    navigateTo('template-create');
+    setSessionTemplateId(templateId);
+    setSessionInitialExercises(null);
+    navigateTo('template-session');
   };
 
   const handleCreateNewTemplate = (_returnScreen: 'track' | 'workout' = 'workout') => {
@@ -268,7 +269,11 @@ export default function App() {
                         navigateTo('template-session');
                       });
                     }}
-
+                    onStartNewWorkout={() => {
+                      setSessionTemplateId(null);
+                      setSessionInitialExercises(null);
+                      navigateTo('template-session');
+                    }}
                     onNavigateToCart={() => navigateTo('cart')}
                     onNavigateToPersonalInfo={() => navigateTo('personal-info')}
                     onNavigateToPreferences={() => navigateTo('preferences')}
@@ -278,7 +283,6 @@ export default function App() {
                     onNavigateToCreatePost={() => navigateTo('create-post')}
                     onSignOut={() => supabase.auth.signOut()}
                     onNavigateToProgram={() => navigateTo('program')}
-                    onNavigateToTemplateCreate={() => handleCreateNewTemplate('track')}
                     onNavigateToMyWorkouts={() => navigateTo('my-workouts')}
                     onNavigateToActivityType={(type) => {
                       setActivityTypeForScreen(type);
@@ -289,7 +293,6 @@ export default function App() {
                       setSessionInitialExercises(null);
                       navigateTo('template-session');
                     }}
-                    onEditTemplate={(templateId: string) => handleEditTemplate(templateId, 'track')}
                     onNavigateToWorkoutInsights={() => navigateTo('workout-insights')}
                     onOpenExerciseDetail={(id, name) => {
                       setExerciseDetailExerciseId(id);
@@ -329,9 +332,7 @@ export default function App() {
                   <WorkoutTrackerScreen
                     navigation={{ goBack }}
                     onNavigateToProgram={() => navigateTo('program')}
-                    onNavigateToTemplateCreate={() => handleCreateNewTemplate('workout')}
                     onNavigateToMyWorkouts={() => navigateTo('my-workouts')}
-                    onEditTemplate={(templateId: string) => handleEditTemplate(templateId, 'workout')}
                     onNavigateToWorkoutInsights={() => navigateTo('workout-insights')}
                   />
                 ) : currentScreen === 'onboarding' ? (
@@ -351,10 +352,10 @@ export default function App() {
                     navigation={{ goBack }}
                     onViewProgramDay={(payload) => {
                       React.startTransition(() => {
-                        setEditingTemplateId(payload.templateId);
+                        setSessionTemplateId(payload.templateId);
                         setSessionProgramId(payload.programId ?? null);
                         setSessionProgramDayId(payload.programDayId ?? null);
-                        navigateTo('template-create');
+                        navigateTo('template-session');
                       });
                     }}
                     onStartProgramDay={(payload) => {
@@ -410,7 +411,6 @@ export default function App() {
                         navigateTo('template-session');
                       });
                     }}
-                    onEditTemplate={handleEditTemplate}
                   />
                 ) : currentScreen === 'add-exercises-for-session' ? (
                   <AddExercisesForSessionScreen
@@ -434,7 +434,6 @@ export default function App() {
                         navigateTo('template-session');
                       });
                     }}
-                    onEditTemplate={handleEditTemplate}
                   />
                 ) : currentScreen === 'workout-history' ? (
                   <WorkoutHistoryScreen
@@ -488,7 +487,6 @@ export default function App() {
                   <WorkoutTrackerScreen
                     navigation={{ goBack }}
                     onNavigateToProgram={() => navigateTo('program')}
-                    onNavigateToTemplateCreate={() => handleCreateNewTemplate('workout')}
                     onNavigateToMyWorkouts={() => navigateTo('my-workouts')}
                     onNavigateToActivityType={(type) => {
                       setActivityTypeForScreen(type);
@@ -499,7 +497,6 @@ export default function App() {
                       setSessionInitialExercises(null);
                       navigateTo('template-session');
                     }}
-                    onEditTemplate={(templateId: string) => handleEditTemplate(templateId, 'workout')}
                     onNavigateToWorkoutInsights={() => navigateTo('workout-insights')}
                   />
                 )}

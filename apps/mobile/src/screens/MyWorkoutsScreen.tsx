@@ -10,12 +10,13 @@ import {
   StatusBar,
   ActivityIndicator,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, radius, space, typography } from '../theme';
 import { FloatingBackButton } from '../components/FloatingBackButton';
-import { useWorkoutTemplates } from '../hooks/useWorkoutTemplates';
+import { useWorkoutTemplates, useDeleteWorkoutTemplate } from '../hooks/useWorkoutTemplates';
 
 type TemplateRow = {
   id: string;
@@ -44,7 +45,6 @@ export type MyWorkoutsScreenProps = {
   onNavigateToWorkoutHistory?: () => void;
   onCreateNew?: () => void;
   onStartTemplate?: (templateId: string) => void;
-  onEditTemplate?: (templateId: string) => void;
 };
 
 export function MyWorkoutsScreen({
@@ -52,12 +52,12 @@ export function MyWorkoutsScreen({
   onNavigateToWorkoutHistory,
   onCreateNew,
   onStartTemplate,
-  onEditTemplate,
 }: MyWorkoutsScreenProps) {
   const paddingTop = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) + 16 : 56;
   const { data, isLoading } = useWorkoutTemplates();
   const templates = (data || []) as TemplateRow[];
   const [search, setSearch] = useState('');
+  const deleteMutation = useDeleteWorkoutTemplate();
 
   const filtered = search.trim()
     ? templates.filter((t) => t.title.toLowerCase().includes(search.trim().toLowerCase()))
@@ -119,8 +119,38 @@ export function MyWorkoutsScreen({
                         end={{ x: 0, y: 1 }}
                         style={[styles.templateCard, { width: Dimensions.get('window').width * 0.42 }]}
                       >
-                        <View style={styles.difficultyTag}>
-                          <Text style={[styles.difficultyText, { color: colors.actionAmber }]}>{t.difficulty_level ?? '--'}</Text>
+                        <View style={styles.cardHeaderRow}>
+                          <View style={styles.difficultyTag}>
+                            <Text style={[styles.difficultyText, { color: colors.actionAmber }]}>{t.difficulty_level ?? '--'}</Text>
+                          </View>
+                          <Pressable
+                            hitSlop={8}
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              if (deleteMutation.isPending) return;
+                              Alert.alert(
+                                'Delete workout',
+                                'Delete this workout template? This cannot be undone.',
+                                [
+                                  { text: 'Cancel', style: 'cancel' },
+                                  {
+                                    text: 'Delete',
+                                    style: 'destructive',
+                                    onPress: () =>
+                                      deleteMutation.mutate(t.id, {
+                                        onError: (err) => {
+                                          const msg = err instanceof Error ? err.message : 'Could not delete workout.';
+                                          Alert.alert('Delete failed', msg);
+                                        },
+                                      }),
+                                  },
+                                ],
+                              );
+                            }}
+                            accessibilityLabel="More options"
+                          >
+                            <MaterialCommunityIcons name="dots-vertical" size={20} color={colors.textPrimary} />
+                          </Pressable>
                         </View>
                         <Text style={styles.templateTitle} numberOfLines={2}>{t.title}</Text>
 
@@ -163,7 +193,37 @@ export function MyWorkoutsScreen({
                         <MaterialCommunityIcons name="dumbbell" size={22} color={colors.textPrimary} />
                       </View>
                       <View style={styles.listBody}>
-                        <Text style={styles.listTitle}>{t.title}</Text>
+                        <View style={styles.listTitleRow}>
+                          <Text style={styles.listTitle}>{t.title}</Text>
+                          <Pressable
+                            hitSlop={8}
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              if (deleteMutation.isPending) return;
+                              Alert.alert(
+                                'Delete workout',
+                                'Delete this workout template? This cannot be undone.',
+                                [
+                                  { text: 'Cancel', style: 'cancel' },
+                                  {
+                                    text: 'Delete',
+                                    style: 'destructive',
+                                    onPress: () =>
+                                      deleteMutation.mutate(t.id, {
+                                        onError: (err) => {
+                                          const msg = err instanceof Error ? err.message : 'Could not delete workout.';
+                                          Alert.alert('Delete failed', msg);
+                                        },
+                                      }),
+                                  },
+                                ],
+                              );
+                            }}
+                            accessibilityLabel="More options"
+                          >
+                            <MaterialCommunityIcons name="dots-vertical" size={20} color={colors.textPrimary} />
+                          </Pressable>
+                        </View>
                         <View style={styles.listMeta}>
                           <Text style={styles.listMetaGray}>{exerciseCount(t)} exercises</Text>
                           {t.activity_type === 'hybrid' && t.activity_type_tags?.length ? (
@@ -312,6 +372,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderSubtle,
   },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: space.sm,
+  },
   difficultyTag: {
     alignSelf: 'flex-start',
     backgroundColor: colors.bgElevated,
@@ -365,6 +431,12 @@ const styles = StyleSheet.create({
     marginRight: space.md,
   },
   listBody: { flex: 1 },
+  listTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space.sm,
+  },
   listTitle: {
     ...typography.base,
     fontWeight: '600',

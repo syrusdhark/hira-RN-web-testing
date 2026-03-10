@@ -50,7 +50,6 @@ export type ActivityTypeWorkoutsScreenProps = {
   navigation?: { goBack: () => void };
   activityType: string;
   onStartTemplate?: (templateId: string) => void;
-  onEditTemplate?: (templateId: string) => void;
   onNavigateToWorkoutHistory?: () => void;
   onCreateNew?: () => void;
 };
@@ -59,7 +58,6 @@ export function ActivityTypeWorkoutsScreen({
   navigation,
   activityType,
   onStartTemplate,
-  onEditTemplate,
 }: ActivityTypeWorkoutsScreenProps) {
   const paddingTop = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) + 16 : 56;
   const { data, isLoading } = useWorkoutTemplates();

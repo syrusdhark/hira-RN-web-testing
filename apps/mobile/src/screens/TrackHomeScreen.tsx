@@ -33,11 +33,10 @@ export function TrackHomeScreen({
   onNavigateToCreatePost,
   onSignOut,
   onNavigateToProgram,
-  onNavigateToTemplateCreate,
   onNavigateToMyWorkouts,
+  onStartNewWorkout,
   onNavigateToActivityType,
   onStartTemplate,
-  onEditTemplate,
   onNavigateToWorkoutInsights,
   onOpenExerciseDetail,
   onNavigateToExercises,
@@ -56,11 +55,10 @@ export function TrackHomeScreen({
   onNavigateToCreatePost?: () => void;
   onSignOut?: () => void;
   onNavigateToProgram?: () => void;
-  onNavigateToTemplateCreate?: () => void;
   onNavigateToMyWorkouts?: () => void;
+  onStartNewWorkout?: () => void;
   onNavigateToActivityType?: (activityType: string) => void;
   onStartTemplate?: (templateId: string) => void;
-  onEditTemplate?: (templateId: string) => void;
   onNavigateToWorkoutInsights?: () => void;
   onOpenExerciseDetail?: (exerciseId: string, exerciseName: string) => void;
   onNavigateToExercises?: () => void;
@@ -82,11 +80,10 @@ export function TrackHomeScreen({
           <WorkoutTrackerScreen
             navigation={{ goBack: () => {} }}
             onNavigateToProgram={onNavigateToProgram}
-            onNavigateToTemplateCreate={onNavigateToTemplateCreate}
             onNavigateToMyWorkouts={onNavigateToMyWorkouts}
+            onStartNewWorkout={onStartNewWorkout}
             onNavigateToActivityType={onNavigateToActivityType}
             onStartTemplate={onStartTemplate}
-            onEditTemplate={onEditTemplate}
             onNavigateToWorkoutInsights={onNavigateToWorkoutInsights}
             onOpenExerciseDetail={onOpenExerciseDetail}
             onNavigateToExercises={onNavigateToExercises}

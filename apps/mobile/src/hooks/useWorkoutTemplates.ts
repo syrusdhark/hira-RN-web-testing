@@ -424,7 +424,6 @@ export function useDeleteWorkoutTemplate() {
                 .eq('id', templateId);
 
             if (error) throw new Error(`Template deletion failed: ${error.message}`);
-
             return templateId;
         },
         onSuccess: () => {
