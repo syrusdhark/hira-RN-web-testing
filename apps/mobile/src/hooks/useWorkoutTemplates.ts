@@ -418,15 +418,45 @@ export function useDeleteWorkoutTemplate() {
 
     return useMutation({
         mutationFn: async (templateId: string) => {
-            const { error } = await supabase
+            const { data, error } = await supabase
                 .from('workout_templates')
                 .delete()
-                .eq('id', templateId);
+                .eq('id', templateId)
+                .select('id');
 
-            if (error) throw new Error(`Template deletion failed: ${error.message}`);
+            if (error) {
+                console.error('Template deletion failed:', error);
+                throw new Error(`Template deletion failed: ${error.message}`);
+            }
+            if (!data || data.length === 0) {
+                console.error('Template deletion affected 0 rows for id', templateId);
+                throw new Error('Template deletion failed: no rows deleted. Check ownership and RLS policies.');
+            }
             return templateId;
         },
-        onSuccess: () => {
+        onMutate: async (templateId) => {
+            // Cancel any outgoing refetches to avoid overwriting our optimistic update
+            await queryClient.cancelQueries({ queryKey: WORKOUT_TEMPLATES_KEY });
+
+            // Snapshot previous value for rollback
+            const previousTemplates = queryClient.getQueryData(WORKOUT_TEMPLATES_KEY);
+
+            // Optimistically remove the template from the list
+            queryClient.setQueryData(WORKOUT_TEMPLATES_KEY, (old: any) => {
+                if (!Array.isArray(old)) return old;
+                return old.filter((t: any) => t.id !== templateId);
+            });
+
+            return { previousTemplates };
+        },
+        onError: (_err, _templateId, context) => {
+            // Rollback to previous templates if something goes wrong
+            if (context?.previousTemplates) {
+                queryClient.setQueryData(WORKOUT_TEMPLATES_KEY, context.previousTemplates);
+            }
+        },
+        onSettled: () => {
+            // Always refetch to ensure server and cache are in sync
             queryClient.invalidateQueries({ queryKey: WORKOUT_TEMPLATES_KEY });
         },
     });
