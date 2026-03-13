@@ -59,6 +59,7 @@ export function AiChatScreen() {
   const [isListening, setIsListening] = useState(false);
   const [keyboardBottomOffset, setKeyboardBottomOffset] = useState(0);
   const flatListRef = useRef<FlatList<MessageItem> | null>(null);
+  const inputRef = useRef<any>(null);
 
   useEffect(() => {
     const showSub = Keyboard.addListener(
@@ -165,6 +166,9 @@ export function AiChatScreen() {
     setInputText('');
     setLoading(true);
 
+    // Maintain focus on the input for a better user experience
+    inputRef.current?.focus();
+
     try {
       const history = messages.map((msg) => ({
         role: (msg.sender === 'user' ? 'user' : 'model') as 'user' | 'model',
@@ -245,6 +249,8 @@ export function AiChatScreen() {
               <MaterialCommunityIcons name="plus" size={24} color="#fff" />
             </TouchableOpacity>
             <TextInput
+              /* @ts-ignore - ref prop type mismatch in React 19 + RN types */
+              ref={inputRef}
               style={styles.input}
               value={inputText}
               onChangeText={setInputText}
